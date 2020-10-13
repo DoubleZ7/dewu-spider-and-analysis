@@ -1,0 +1,23 @@
+monitortime: 60
+
+maxtimeout: 30
+logConfig:
+  logFilePath: 'D:/dewuSpider/spiderLog'
+  testLogLevel:
+    mainLogLevel: INFO
+    fileLogLevel: INFO
+    consoleLogLevel: INFO
+  productLogLevel:
+    mainLogLevel: INFO
+    fileLogLevel: INFO
+    consoleLogLevel: ERROR
+
+db:
+  host: '127.0.0.1'
+  username: 'root'
+  password: 'root'
+  port: 3306
+  dbName: 'magic'
+  charset: 'utf8'
+
+
