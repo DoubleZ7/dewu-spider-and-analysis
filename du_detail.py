@@ -68,7 +68,6 @@ def getLastSoldList(flow):
     :param flow:
     :return:返回20个销售记录
     """
-    global newest
     global flag_is_do
     allData = json.loads(flow.response.text)
     dataList = allData.get('data').get('list')
@@ -84,11 +83,15 @@ def getLastSoldList(flow):
             d['price'] / 100,
             d['orderSubTypeName'],
             d['propertiesValues'],
-            entity[1]
+            entity[2]
         )
-        if not newest and compareRecord(newest, record):
-            flag_is_do = 0
-            break
+        if newest:
+            do_it = compareRecord(newest, record)
+            if do_it:
+                flag_is_do = 0
+                break
+            else:
+                recordList.append(record)
         else:
             recordList.append(record)
     return recordList
@@ -102,8 +105,12 @@ def compareRecord(dbData, record):
     :return:
     """
     for i in range(len(record)):
-        if i == 0:
+        if i == 0 or i == 3 or i == 7:
             continue
+        if i == 4:
+            price = dbData[i]
+            if not int(price) == record[i]:
+                return False
         if not dbData[i] == record[i]:
             return False
     return True
@@ -127,7 +134,18 @@ def refactorFormatTime(formatTime):
 
 
 if __name__ == '__main__':
-    formatTime = '10月6日'
-    d = refactorFormatTime(formatTime)
-    print(d)
+    d = (
+        None,
+        '884129-104',
+        '官*',
+        '2020-10-13',
+        1849,
+        '',
+        '40',
+        '2020-10-13'
+    )
 
+    getNewestSql = "SELECT * FROM t_org_purchase_record WHERE id = (SELECT MAX(id) FROM t_org_purchase_record " \
+                   "WHERE article_number = '{}') ".format('884129-104')
+    newest = db.getOne(getNewestSql)
+    print(compareRecord(newest, d))
