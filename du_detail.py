@@ -23,6 +23,7 @@ def response(flow):
     global entity
     global newest
     requestUrl = flow.request.url
+    # 判断是否是获取商品详情的URL
     if detailUrl in requestUrl:
         global flag_is_do
         # 每次进入一次详情重置一次是否继续查询标识
@@ -36,14 +37,9 @@ def response(flow):
         if not entity[0]:
             detailSql = 'INSERT INTO org_detail VALUES(%s, %s, %s, %s, %s, %s, %s)'
             db.insertData(detailSql, entity)
+    # 判断是否是获取商品详情的URL，当前商品是否存在，是否需要继续爬取
     if lastSoldUrl in requestUrl and entity and flag_is_do == 1:
-        if newest:
-            print('++++++++++++++++++++++进入了每日日常获取++++++++++++++++++++++++++')
-            # 每天日常获取交易记录
-            dataList = getDayLastSoldList(flow)
-        else:
-            # 第一次进入商品获取交易记录
-            dataList = getFirstLastSoldList(flow)
+        dataList = getLastSoldList(flow)
         insertSql = 'INSERT INTO org_purchase_record VALUES(%s, %s, %s, %s, %s, %s, %s, %s)'
         db.insertDataList(insertSql, dataList)
 
@@ -71,7 +67,7 @@ def getDetail(flow):
     return detail
 
 
-def getFirstLastSoldList(flow):
+def getLastSoldList(flow):
     """
     第一次获取单件商品的销售记录
     :param flow:
@@ -83,38 +79,12 @@ def getFirstLastSoldList(flow):
     recordList = []
     articleNumber = entity[6]
     for d in dataList:
-        formatTime = refactorFormatTime(d['formatTime'])
-        record = (
-            None,
-            articleNumber,
-            d['userName'],
-            formatTime,
-            d['price'] / 100,
-            d['orderSubTypeName'],
-            d['propertiesValues'],
-            entity[2]
-        )
-        recordList.append(record)
-    return recordList[::-1]
-
-
-def getDayLastSoldList(flow):
-    """
-    获取每天的交易记录
-    :param flow:
-    :return:
-    """
-    global flag_is_do
-    allData = json.loads(flow.response.text)
-    dataList = allData.get('data').get('list')
-    recordList = []
-    articleNumber = entity[6]
-    for d in dataList:
-        # 判断是否是当天的数据 如果是则放入集合，如果不是则跳出循环标识不再获取交易记录
         formatTime = d['formatTime']
-        if '天' in formatTime or '月' in formatTime:
-            flag_is_do = 0
-            break
+        # 判断是否是当天的数据 如果是则放入集合，如果不是则跳出循环标识不再获取交易记录
+        if newest:
+            if '天' in formatTime or '月' in formatTime:
+                flag_is_do = 0
+                break
         formatTime = refactorFormatTime(formatTime)
         record = (
             None,
