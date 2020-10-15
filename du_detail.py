@@ -24,17 +24,26 @@ def response(flow):
     global newest
     requestUrl = flow.request.url
     if detailUrl in requestUrl:
+        global flag_is_do
+        # 每次进入一次详情重置一次是否继续查询标识
+        flag_is_do = 1
         # 获取当前商品的信息（每个商品只获取一次）
         entity = getDetail(flow)
         # 获取当前商品的最新一条交易记录（每个商品只获取一次）
         getNewestSql = "SELECT * FROM org_purchase_record WHERE id = ((SELECT MAX(id) FROM org_purchase_record " \
-                       "WHERE article_number = '{}') + 20) ".format(entity[6])
+                       "WHERE article_number = '{}')) ".format(entity[6])
         newest = db.getOne(getNewestSql)
         if not entity[0]:
             detailSql = 'INSERT INTO org_detail VALUES(%s, %s, %s, %s, %s, %s, %s)'
             db.insertData(detailSql, entity)
     if lastSoldUrl in requestUrl and entity and flag_is_do == 1:
-        dataList = getLastSoldList(flow)
+        if newest:
+            print('++++++++++++++++++++++进入了每日日常获取++++++++++++++++++++++++++')
+            # 每天日常获取交易记录
+            dataList = getDayLastSoldList(flow)
+        else:
+            # 第一次进入商品获取交易记录
+            dataList = getFirstLastSoldList(flow)
         insertSql = 'INSERT INTO org_purchase_record VALUES(%s, %s, %s, %s, %s, %s, %s, %s)'
         db.insertDataList(insertSql, dataList)
 
@@ -62,9 +71,9 @@ def getDetail(flow):
     return detail
 
 
-def getLastSoldList(flow):
+def getFirstLastSoldList(flow):
     """
-    获取单件商品的销售记录
+    第一次获取单件商品的销售记录
     :param flow:
     :return:返回20个销售记录
     """
@@ -85,15 +94,39 @@ def getLastSoldList(flow):
             d['propertiesValues'],
             entity[2]
         )
-        if newest:
-            do_it = compareRecord(newest, record)
-            if do_it:
-                flag_is_do = 0
-                break
-            else:
-                recordList.append(record)
-        else:
-            recordList.append(record)
+        recordList.append(record)
+    return recordList[::-1]
+
+
+def getDayLastSoldList(flow):
+    """
+    获取每天的交易记录
+    :param flow:
+    :return:
+    """
+    global flag_is_do
+    allData = json.loads(flow.response.text)
+    dataList = allData.get('data').get('list')
+    recordList = []
+    articleNumber = entity[6]
+    for d in dataList:
+        # 判断是否是当天的数据 如果是则放入集合，如果不是则跳出循环标识不再获取交易记录
+        formatTime = d['formatTime']
+        if '天' in formatTime or '月' in formatTime:
+            flag_is_do = 0
+            break
+        formatTime = refactorFormatTime(formatTime)
+        record = (
+            None,
+            articleNumber,
+            d['userName'],
+            formatTime,
+            d['price'] / 100,
+            d['orderSubTypeName'],
+            d['propertiesValues'],
+            entity[2]
+        )
+        recordList.append(record)
     return recordList[::-1]
 
 
