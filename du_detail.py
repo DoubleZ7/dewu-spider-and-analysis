@@ -27,15 +27,15 @@ def response(flow):
         # 获取当前商品的信息（每个商品只获取一次）
         entity = getDetail(flow)
         # 获取当前商品的最新一条交易记录（每个商品只获取一次）
-        getNewestSql = "SELECT * FROM t_org_purchase_record WHERE id = (SELECT MAX(id) FROM t_org_purchase_record " \
-                       "WHERE article_number = '{}') ".format(entity[6])
+        getNewestSql = "SELECT * FROM org_purchase_record WHERE id = ((SELECT MAX(id) FROM org_purchase_record " \
+                       "WHERE article_number = '{}') + 20) ".format(entity[6])
         newest = db.getOne(getNewestSql)
         if not entity[0]:
-            detailSql = 'INSERT INTO t_org_detail VALUES(%s, %s, %s, %s, %s, %s, %s)'
+            detailSql = 'INSERT INTO org_detail VALUES(%s, %s, %s, %s, %s, %s, %s)'
             db.insertData(detailSql, entity)
     if lastSoldUrl in requestUrl and entity and flag_is_do == 1:
         dataList = getLastSoldList(flow)
-        insertSql = 'INSERT INTO t_org_purchase_record VALUES(%s, %s, %s, %s, %s, %s, %s, %s)'
+        insertSql = 'INSERT INTO org_purchase_record VALUES(%s, %s, %s, %s, %s, %s, %s, %s)'
         db.insertDataList(insertSql, dataList)
 
 
@@ -48,7 +48,7 @@ def getDetail(flow):
     allData = json.loads(flow.response.text)
     d = allData.get('data').get('detail')
     articleNumber = d.get('articleNumber')
-    detail = db.getOne("SELECT * FROM t_org_detail WHERE article_number = '{}'".format(articleNumber))
+    detail = db.getOne("SELECT * FROM org_detail WHERE article_number = '{}'".format(articleNumber))
     if not detail:
         detail = (
             None,
@@ -94,7 +94,7 @@ def getLastSoldList(flow):
                 recordList.append(record)
         else:
             recordList.append(record)
-    return recordList
+    return recordList[::-1]
 
 
 def compareRecord(dbData, record):
@@ -134,18 +134,7 @@ def refactorFormatTime(formatTime):
 
 
 if __name__ == '__main__':
-    d = (
-        None,
-        '884129-104',
-        '官*',
-        '2020-10-13',
-        1849,
-        '',
-        '40',
-        '2020-10-13'
-    )
-
-    getNewestSql = "SELECT * FROM t_org_purchase_record WHERE id = (SELECT MAX(id) FROM t_org_purchase_record " \
-                   "WHERE article_number = '{}') ".format('884129-104')
+    getNewestSql = "SELECT * FROM org_purchase_record WHERE id = ((SELECT MAX(id) FROM org_purchase_record " \
+                   "WHERE article_number = '{}') + 20) ".format('CV3583-003')
     newest = db.getOne(getNewestSql)
-    print(compareRecord(newest, d))
+    print(newest)

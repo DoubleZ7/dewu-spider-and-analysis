@@ -15,9 +15,9 @@ logConfig:
 db:
   host: '127.0.0.1'
   username: 'root'
-  password: 'root'
+  password: 'doublez'
   port: 3306
-  dbName: 'magic'
+  dbName: 'transaction_data'
   charset: 'utf8'
 
 
