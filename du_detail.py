@@ -94,7 +94,7 @@ def getLastSoldList(flow):
             d['price'] / 100,
             d['orderSubTypeName'],
             d['propertiesValues'],
-            entity[2]
+            time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         )
         recordList.append(record)
     return recordList[::-1]
