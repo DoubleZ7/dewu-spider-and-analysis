@@ -13,9 +13,9 @@ logConfig:
     consoleLogLevel: ERROR
 
 db:
-  host: '127.0.0.1'
+  host: '47.108.128.187'
   username: 'root'
-  password: 'doublez'
+  password: 'doublezx'
   port: 3306
   dbName: 'transaction_data'
   charset: 'utf8'
