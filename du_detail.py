@@ -29,14 +29,20 @@ def response(flow):
         # 每次进入一次详情重置一次是否继续查询标识
         flag_is_do = 1
         # 获取当前商品的信息（每个商品只获取一次）
-        entity = getDetail(flow)
+        entity, imgList = getDetail(flow)
         # 获取当前商品的最新一条交易记录（每个商品只获取一次）
         getNewestSql = "SELECT * FROM org_purchase_record WHERE id = ((SELECT MAX(id) FROM org_purchase_record " \
                        "WHERE article_number = '{}')) ".format(entity[6])
         newest = db.getOne(getNewestSql)
         if not entity[0]:
-            detailSql = 'INSERT INTO org_detail VALUES(%s, %s, %s, %s, %s, %s, %s)'
+            # 插入详情
+            detailSql = 'INSERT INTO org_detail VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'
+            print("-----------"+str(entity)+"-----------")
             db.insertData(detailSql, entity)
+
+            # 插入详情图片
+            insertImgSql = 'INSERT INTO org_detail_img VALUES(%s, %s, %s, %s, %s, %s)'
+            db.insertDataList(insertImgSql, imgList)
     # 判断是否是获取商品详情的URL，当前商品是否存在，是否需要继续爬取
     if lastSoldUrl in requestUrl and entity and flag_is_do == 1:
         dataList = getLastSoldList(flow)
@@ -51,20 +57,45 @@ def getDetail(flow):
     :return:返回单件商品的详情实体
     """
     allData = json.loads(flow.response.text)
-    d = allData.get('data').get('detail')
-    articleNumber = d.get('articleNumber')
+    data = allData.get('data')
+    # 详情
+    pageDetail = data.get('detail')
+    articleNumber = pageDetail.get('articleNumber')
     detail = db.getOne("SELECT * FROM org_detail WHERE article_number = '{}'".format(articleNumber))
+    imgList = []
     if not detail:
+        # 参数
+        baseProperties = data.get('baseProperties')
+        brandList = baseProperties["brandList"]
+        parameterList = baseProperties["list"]
+        parameters = getParameter(parameterList)
+
+        # 图片
+        imageAndText = data.get("imageAndText")
+        images = imageAndText[1].get("images")
+        imgList = getImgUrl(images, articleNumber)
+        # 下载logo
+
+        # 下载详情图片
+
         detail = (
             None,
-            d.get('title'),
+            pageDetail.get('title'),
             time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
             time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-            d.get('authPrice'),
-            d.get('sellDate'),
-            articleNumber
+            pageDetail.get('authPrice'),
+            pageDetail.get('sellDate'),
+            articleNumber,
+            pageDetail["logoUrl"],
+            brandList[0].get("brandName"),
+            parameters["functionality"],
+            parameters["blendent"],
+            parameters["upperLevel"],
+            parameters["topShoeStyles"],
+            parameters["heelType"],
+            None
         )
-    return detail
+    return detail, imgList
 
 
 def getLastSoldList(flow):
@@ -136,8 +167,54 @@ def refactorFormatTime(formatTime):
     return newTime
 
 
+def getParameter(parameterList):
+    """
+    根据参数列表返回参数字典
+    :param parameterList: 参数列表
+    :return:参数字典
+    """
+    parameter = {'functionality': None, 'blendent': None, 'upperLevel': None, 'topShoeStyles': None, 'heelType': None}
+    for p in parameterList:
+        key = p['key']
+        value = p['value']
+        if key == '功能性':
+            parameter['functionality'] = value
+        elif key == '配色':
+            parameter['blendent'] = value
+        elif key == '鞋帮高度':
+            parameter['upperLevel'] = value
+        elif key == '鞋头款式':
+            parameter['topShoeStyles'] = value
+        elif key == '鞋跟类型':
+            parameter['heelType'] = value
+    return parameter
+
+
+def getImgUrl(images, articleNumber):
+    """
+    获取图片URL
+    :param images:
+    :return:
+    """
+    imgList = []
+    count = 1
+    for g in images:
+        img = (
+            None,
+            articleNumber,
+            g["url"],
+            count,
+            g["width"],
+            g["height"]
+        )
+        imgList.append(img)
+        count += 1
+    return imgList
+
+
 if __name__ == '__main__':
-    getNewestSql = "SELECT * FROM org_purchase_record WHERE id = ((SELECT MAX(id) FROM org_purchase_record " \
-                   "WHERE article_number = '{}') + 20) ".format('CV3583-003')
-    newest = db.getOne(getNewestSql)
-    print(newest)
+    d = {
+        "ddd": 100,
+        "sssss": 200
+    }
+    print(d["ddd"])
