@@ -1,13 +1,17 @@
 import json
 import time
 import datetime
+import requests
 import mitmproxy
+import os.path
 
 from mysql_db import mysqlDb
+from configUtil import ConfigUtil
 
 detailUrl = 'https://app.dewu.com/api/v1/app/index/ice/flow/product/detail'
 lastSoldUrl = 'https://app.dewu.com/api/v1/app/commodity/ice/last-sold-list'
 db = mysqlDb()
+config = ConfigUtil()
 
 entity = None
 newest = None
@@ -75,9 +79,7 @@ def getDetail(flow):
         images = imageAndText[1].get("images")
         imgList = getImgUrl(images, articleNumber)
         # 下载logo
-
-        # 下载详情图片
-
+        logoUrl = downloadImg(pageDetail["logoUrl"], articleNumber)
         detail = (
             None,
             pageDetail.get('title'),
@@ -86,7 +88,7 @@ def getDetail(flow):
             pageDetail.get('authPrice'),
             pageDetail.get('sellDate'),
             articleNumber,
-            pageDetail["logoUrl"],
+            logoUrl,
             brandList[0].get("brandName"),
             parameters["functionality"],
             parameters["blendent"],
@@ -199,22 +201,37 @@ def getImgUrl(images, articleNumber):
     imgList = []
     count = 1
     for g in images:
-        img = (
-            None,
-            articleNumber,
-            g["url"],
-            count,
-            g["width"],
-            g["height"]
-        )
-        imgList.append(img)
-        count += 1
+        u = downloadImg(g["url"], articleNumber + str(count))
+        height = g["height"]
+        if height > 100:
+            img = (
+                None,
+                articleNumber,
+                u,
+                count,
+                g["width"],
+                g["height"]
+            )
+            imgList.append(img)
+            count += 1
     return imgList
 
 
+def downloadImg(imgUrl, fileName):
+    suffix = os.path.splitext(imgUrl)[1]
+    if suffix == '':
+        suffix = '.jpg'
+    host = config.getValue("web")["host"]
+    port = config.getValue("web")["port"]
+    imgPath = config.getValue("web")["imgUrl"]
+    url = "http://" + host + ":" + port + imgPath
+    data = {"url": imgUrl, "fileName": fileName, "suffix": suffix}
+    r = requests.post(url, data=data)
+    return host + ":" + port + "/static/images/" + fileName + suffix
+
+
 if __name__ == '__main__':
-    d = {
-        "ddd": 100,
-        "sssss": 200
-    }
-    print(d["ddd"])
+    imgUrl = "https://cdn.poizon.com/temp/Fn20HZPjmCnQk_VCNJ9C2HRg0xP5"
+    fileName = "demo"
+    path = downloadImg(imgUrl, fileName)
+    print(path)

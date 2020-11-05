@@ -21,4 +21,10 @@ db:
   dbName: 'transaction_data'
   charset: 'utf8'
 
+web:
+  host: '127.0.0.1'
+  port: '8081'
+  domainName:
+  imgUrl: '/fileUpload/img'
+
 
