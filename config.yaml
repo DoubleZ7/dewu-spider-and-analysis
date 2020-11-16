@@ -2,7 +2,7 @@ monitortime: 60
 
 maxtimeout: 30
 logConfig:
-  logFilePath: 'D:/dewuSpider/spiderLog'
+  logFilePath: 'dewuSpider/spiderLog'
   testLogLevel:
     mainLogLevel: INFO
     fileLogLevel: INFO
@@ -13,16 +13,16 @@ logConfig:
     consoleLogLevel: ERROR
 
 db:
-  # host: '47.108.128.187'
-  host: '127.0.0.1'
+  host: '47.108.128.187'
+  # host: '127.0.0.1'
   username: 'root'
-  password: 'doubleztt'
+  password: 'doublezx'
   port: 3306
   dbName: 'transaction_data'
   charset: 'utf8'
 
 web:
-  host: '127.0.0.1'
+  host: '47.108.128.187'
   port: '8081'
   domainName:
   imgUrl: '/fileUpload/img'

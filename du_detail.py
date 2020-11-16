@@ -1,9 +1,8 @@
 import json
 import time
 import datetime
-import requests
-import mitmproxy
 import os.path
+import mitmproxy
 
 from mysql_db import mysqlDb
 from configUtil import ConfigUtil
@@ -27,6 +26,11 @@ def response(flow):
     global entity
     global newest
     requestUrl = flow.request.url
+
+    print("--------------进入了详情--------------------")
+    print("--------------请求地址--------------------")
+    print(requestUrl)
+
     # 判断是否是获取商品详情的URL
     if detailUrl in requestUrl:
         global flag_is_do
@@ -42,11 +46,16 @@ def response(flow):
         newest = db.getOne(getNewestSql)
         if not entity[0]:
             # 插入详情
-            detailSql = 'INSERT INTO org_detail VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'
+            detailSql = 'INSERT INTO org_detail VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'
             db.insertData(detailSql, entity)
             # 插入详情图片
             insertImgSql = 'INSERT INTO org_detail_img VALUES(%s, %s, %s, %s, %s, %s)'
             db.insertDataList(insertImgSql, imgList)
+        else:
+            # 修改商品更新状态
+            updateSql = "UPDATE org_detail SET is_update = 1 where article_number='{}'".format(entity[6])
+            db.executeSql(updateSql)
+
     # 判断是否是获取商品详情的URL，当前商品是否存在，是否需要继续爬取
     if lastSoldUrl in requestUrl and entity and flag_is_do == 1:
         dataList = getLastSoldList(flow)
@@ -95,7 +104,8 @@ def getDetail(flow):
             parameters["upperLevel"],
             parameters["topShoeStyles"],
             parameters["heelType"],
-            None
+            None,
+            1
         )
     return detail, imgList
 
@@ -112,13 +122,13 @@ def getLastSoldList(flow):
     recordList = []
     articleNumber = entity[6]
     for d in dataList:
-        formatTime = d['formatTime']
         # 判断是否是当天的数据 如果是则放入集合，如果不是则跳出循环标识不再获取交易记录
         if newest:
             if compareRecord(newest, d):
             # if '天' in formatTime or '月' in formatTime:
                 flag_is_do = 0
                 break
+        formatTime = d['formatTime']
         formatTime = refactorFormatTime(formatTime)
         record = (
             None,
@@ -231,11 +241,10 @@ def downloadImg(imgUrl, fileName):
     imgPath = config.getValue("web")["imgUrl"]
     url = "http://" + host + ":" + port + imgPath
     data = {"url": imgUrl, "fileName": fileName, "suffix": suffix}
-    r = requests.post(url, data=data)
+    # r = requests.post(url, data=data)
     return host + ":" + port + "/static/images/" + fileName + suffix
 
 
 if __name__ == '__main__':
-    formatTime = "20小时前"
-    time = refactorFormatTime(formatTime)
-    print(time)
+    detail = db.getOne("SELECT * FROM org_detail WHERE article_number = '{}'".format('CK4344-002'))
+    print(detail)
