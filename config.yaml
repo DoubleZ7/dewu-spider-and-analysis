@@ -16,7 +16,7 @@ db:
   # host: '47.108.128.187'
   host: '127.0.0.1'
   username: 'root'
-  password: 'doublez'
+  password: 'doubleztt'
   port: 3306
   dbName: 'transaction_data'
   charset: 'utf8'

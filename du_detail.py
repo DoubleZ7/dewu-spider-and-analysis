@@ -35,15 +35,15 @@ def response(flow):
         # 获取当前商品的信息（每个商品只获取一次）
         entity, imgList = getDetail(flow)
         # 获取当前商品的最新一条交易记录（每个商品只获取一次）
-        getNewestSql = "SELECT * FROM org_purchase_record WHERE id = ((SELECT MAX(id) FROM org_purchase_record " \
-                       "WHERE article_number = '{}')) ".format(entity[6])
+        # getNewestSql = "SELECT * FROM org_purchase_record WHERE id = ((SELECT MAX(id) FROM org_purchase_record " \
+                       # "WHERE article_number = '{}')) ".format(entity[6])
+        getNewestSql = "select * from org_purchase_record r WHERE article_number='{}' ORDER BY ABS(NOW() - " \
+                       "r.format_time) ASC limit 1".format(entity[6])
         newest = db.getOne(getNewestSql)
         if not entity[0]:
             # 插入详情
             detailSql = 'INSERT INTO org_detail VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'
-            print("-----------"+str(entity)+"-----------")
             db.insertData(detailSql, entity)
-
             # 插入详情图片
             insertImgSql = 'INSERT INTO org_detail_img VALUES(%s, %s, %s, %s, %s, %s)'
             db.insertDataList(insertImgSql, imgList)
@@ -115,7 +115,8 @@ def getLastSoldList(flow):
         formatTime = d['formatTime']
         # 判断是否是当天的数据 如果是则放入集合，如果不是则跳出循环标识不再获取交易记录
         if newest:
-            if '天' in formatTime or '月' in formatTime:
+            if compareRecord(newest, d):
+            # if '天' in formatTime or '月' in formatTime:
                 flag_is_do = 0
                 break
         formatTime = refactorFormatTime(formatTime)
@@ -160,7 +161,11 @@ def refactorFormatTime(formatTime):
     """
     y = time.strftime("%Y", time.localtime())
     if '前' in formatTime:
-        newTime = datetime.datetime.now().strftime("%Y-%m-%d")
+        if '小时' in formatTime:
+            h = formatTime[0:formatTime.find('小')]
+            newTime = (datetime.datetime.now() + datetime.timedelta(hours=-int(h))).strftime("%Y-%m-%d")
+        else:
+            newTime = datetime.datetime.now().strftime("%Y-%m-%d")
         if '天' in formatTime:
             dd = formatTime[0:formatTime.find('天')]
             newTime = (datetime.datetime.now() + datetime.timedelta(days=-int(dd))).strftime("%Y-%m-%d")
@@ -231,7 +236,6 @@ def downloadImg(imgUrl, fileName):
 
 
 if __name__ == '__main__':
-    imgUrl = "https://cdn.poizon.com/temp/Fn20HZPjmCnQk_VCNJ9C2HRg0xP5"
-    fileName = "demo"
-    path = downloadImg(imgUrl, fileName)
-    print(path)
+    formatTime = "20小时前"
+    time = refactorFormatTime(formatTime)
+    print(time)
