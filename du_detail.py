@@ -1,6 +1,7 @@
 import json
 import time
 import datetime
+import requests
 import os.path
 import mitmproxy
 
@@ -241,7 +242,7 @@ def downloadImg(imgUrl, fileName):
     imgPath = config.getValue("web")["imgUrl"]
     url = "http://" + host + ":" + port + imgPath
     data = {"url": imgUrl, "fileName": fileName, "suffix": suffix}
-    # r = requests.post(url, data=data)
+    r = requests.post(url, data=data)
     return host + ":" + port + "/static/images/" + fileName + suffix
 
 
