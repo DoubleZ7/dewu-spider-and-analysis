@@ -1,7 +1,11 @@
 import json
+import sys
 import time
 import datetime
 import os.path
+# mac环境下需要添加的代码
+sys.path.append('/Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages')
+import requests
 import mitmproxy
 
 from mysql_db import mysqlDb
@@ -26,11 +30,6 @@ def response(flow):
     global entity
     global newest
     requestUrl = flow.request.url
-
-    print("--------------进入了详情--------------------")
-    print("--------------请求地址--------------------")
-    print(requestUrl)
-
     # 判断是否是获取商品详情的URL
     if detailUrl in requestUrl:
         global flag_is_do
@@ -239,10 +238,10 @@ def downloadImg(imgUrl, fileName):
     host = config.getValue("web")["host"]
     port = config.getValue("web")["port"]
     imgPath = config.getValue("web")["imgUrl"]
-    url = "http://" + host + ":" + port + imgPath
+    url = "http://" + host + imgPath
     data = {"url": imgUrl, "fileName": fileName, "suffix": suffix}
-    # r = requests.post(url, data=data)
-    return host + ":" + port + "/static/images/" + fileName + suffix
+    r = requests.post(url, data=data)
+    return host + ":" + port + "/file/img/" + fileName + suffix
 
 
 if __name__ == '__main__':
