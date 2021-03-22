@@ -37,10 +37,11 @@ class Logger:
         :return: 返回配置中读取的level
         """
         try:
-            with open('./config.yaml', 'r', encoding='utf-8') as f:
+            with open('config.yaml', 'r', encoding='utf-8') as f:
                 global config_data
                 config_data = yaml.load(f, Loader=yaml.FullLoader)
-        except IOError:
+        except IOError as e:
+            print(e)
             self.logger.error('open config file failed')
         case1 = config_data['logConfig']['testLogLevel']['mainLogLevel']
         case2 = config_data['logConfig']['testLogLevel']['fileLogLevel']
@@ -57,7 +58,7 @@ class Logger:
         :return:
         """
         try:
-            with open('./config.yaml', 'r', encoding='utf-8') as f:
+            with open('config.yaml', 'r', encoding='utf-8') as f:
                 global config_data
                 config_data = yaml.load(f, Loader=yaml.FullLoader)
         except IOError:
@@ -86,5 +87,8 @@ class Logger:
 
 
 if __name__ == '__main__':
-    log = Logger()
-    print(log.getLogFilePath())
+    # log = Logger()
+    # print(log.getLogFilePath())
+
+    with open('config.yaml', 'r') as f:
+        print(f.readline())

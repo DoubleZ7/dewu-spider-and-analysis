@@ -18,11 +18,16 @@ def get_sign(params: dict):
     return m.hexdigest()
 
 
-def get_header():
+def get_header(request_type):
     """
     获取请求头
     :return:
     """
+    referer = ''
+    if request_type == 'info':
+        referer = 'https://servicewechat.com/wx3c12cdd0ae8b1a7b/196/page-frame.html'
+    elif request_type == 'record':
+        referer = 'https://servicewechat.com/wx3c12cdd0ae8b1a7b/202/page-frame.html'
     return {
         'Host': 'app.dewu.com',
         'AppId': 'wxapp',
@@ -33,7 +38,7 @@ def get_header():
         'platform': 'h5',
         'Content-Type': 'application/json;charset=UTF-8',
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.2(0x18000232) NetType/WIFI Language/zh_CN',
-        'Referer': 'https://servicewechat.com/wx3c12cdd0ae8b1a7b/196/page-frame.html',
+        'Referer': referer,
         'Connection': 'keep-alive',
         'Wxapp-Login-Token': ''
     }

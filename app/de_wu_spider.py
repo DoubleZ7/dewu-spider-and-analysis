@@ -1,13 +1,18 @@
 import requests
-import json
 import time
-from utils import request_util
+import os
+import datetime
+import random
 
-from mysql_db import mysqlDb
+from app.util import request_util
+from app.db.my_sql_db import mysqlDb
 from configUtil import ConfigUtil
 
 db = mysqlDb()
 config = ConfigUtil()
+
+# 移除跳过认证警告
+requests.packages.urllib3.disable_warnings()
 
 
 def get_info(spuId):
@@ -21,58 +26,53 @@ def get_info(spuId):
         "productSourceName": "",
         "propertyValueId": "0"
     }
-    request_util.add_sign(data)
+    data = request_util.add_sign(data)
     url = 'https://app.dewu.com/api/v1/h5/index/fire/flow/product/detail'
-    requests.packages.urllib3.disable_warnings()
-    res = requests.post(url, json=data, headers=request_util.get_header(), verify=False)
+    res = requests.post(url, json=data, headers=request_util.get_header('info'), verify=False)
     if res.status_code == 200:
-        get_detail(res.json())
+        data = res.json().get('data')
+        # 详情
+        pageDetail = data.get('detail')
+        articleNumber = pageDetail.get('articleNumber')
+        detail = db.getOne("SELECT * FROM org_detail WHERE article_number = '{}'".format(articleNumber))
+        if not detail:
+            # 参数
+            baseProperties = data.get('baseProperties')
+            brandList = baseProperties["brandList"]
+            parameterList = baseProperties["list"]
+            parameters = get_parameter(parameterList)
 
+            # 图片
+            image_and_txt = data.get("imageAndText")
+            imgList = get_img_url(image_and_txt, articleNumber)
 
-def get_detail(all_data):
-    """
-    获取单件商品的详情
-    :param all_data:
-    :return:返回单件商品的详情实体
-    """
-    data = all_data.get('data')
-    # 详情
-    pageDetail = data.get('detail')
-    articleNumber = pageDetail.get('articleNumber')
-    detail = db.getOne("SELECT * FROM org_detail WHERE article_number = '{}'".format(articleNumber))
-    imgList = []
-    if not detail:
-        # 参数
-        baseProperties = data.get('baseProperties')
-        brandList = baseProperties["brandList"]
-        parameterList = baseProperties["list"]
-        parameters = get_parameter(parameterList)
-
-        # 图片
-        imageAndText = data.get("imageAndText")
-        images = imageAndText[1].get("images")
-        imgList = get_img_url(images, articleNumber)
-        # 下载logo
-        # logoUrl = downloadImg(pageDetail["logoUrl"], articleNumber)
-        detail = (
-            None,
-            pageDetail.get('title'),
-            time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-            time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-            pageDetail.get('authPrice'),
-            pageDetail.get('sellDate'),
-            articleNumber,
-            'logoUrl',
-            brandList[0].get("brandName"),
-            parameters["functionality"],
-            parameters["blendent"],
-            parameters["upperLevel"],
-            parameters["topShoeStyles"],
-            parameters["heelType"],
-            None,
-            1
-        )
-    return detail, imgList
+            # 下载logo
+            logoUrl = downloadImg(pageDetail["logoUrl"], articleNumber)
+            detail = (
+                None,
+                pageDetail.get('title'),
+                spuId,
+                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+                pageDetail.get('authPrice'),
+                pageDetail.get('sellDate'),
+                articleNumber,
+                logoUrl,
+                brandList[0].get("brandName"),
+                parameters["functionality"],
+                parameters["blendent"],
+                parameters["upperLevel"],
+                parameters["topShoeStyles"],
+                parameters["heelType"],
+                None
+            )
+            # 持久化到数据库
+            # 插入详情
+            detail_sql = 'INSERT INTO org_detail VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'
+            db.insertData(detail_sql, detail)
+            # 插入详情图片
+            insert_img_sql = 'INSERT INTO org_detail_img VALUES(%s, %s, %s, %s, %s, %s)'
+            db.insertDataList(insert_img_sql, imgList)
 
 
 def get_parameter(parameterList):
@@ -80,7 +80,7 @@ def get_parameter(parameterList):
         根据参数列表返回参数字典
         :param parameterList: 参数列表
         :return:参数字典
-        """
+    """
     parameter = {'functionality': None, 'blendent': None, 'upperLevel': None, 'topShoeStyles': None, 'heelType': None}
     for p in parameterList:
         key = p['key']
@@ -108,21 +108,167 @@ def get_img_url(images, article_number):
     imgList = []
     count = 1
     for g in images:
-        # u = downloadImg(g["url"], articleNumber + str(count))
-        height = g["height"]
-        if height > 100:
-            img = (
-                None,
-                article_number,
-                'images_url',
-                count,
-                g["width"],
-                g["height"]
-            )
-            imgList.append(img)
-            count += 1
+        if len(g) > 2:
+            # 判断是否为尺码对照表
+            contentType = g['contentType']
+            if contentType != 'STRUCTURE_SIZE' and contentType != 'SIZETEMPLATE' and contentType != 'ATTENTION':
+                g = g['images'][0]
+            else:
+                continue
+            u = downloadImg(g.get('url'), article_number + str(count))
+            height = g["height"]
+            if height > 100:
+                img = (
+                    None,
+                    article_number,
+                    u,
+                    count,
+                    g["width"],
+                    g["height"]
+                )
+                imgList.append(img)
+                count += 1
     return imgList
 
 
+def get_record(spuId):
+    """
+    获取当天的交易记录
+    :param spuId:
+    :return:
+    """
+    # 获取当前商品的货号
+    get_article_number_sql = f"SELECT article_number FROM org_detail WHERE spu_id = '{spuId}'"
+    _article_number = db.getOne(get_article_number_sql)[0]
+
+    # 获取最新一条交易记录
+    get_newest_sql = f"select * from org_purchase_record r WHERE article_number='{_article_number}' ORDER BY ABS(NOW() - " \
+                   "r.format_time) ASC limit 1"
+    newest = db.getOne(get_newest_sql)
+    lastId = ""
+    count = 10
+    # 判断是否有记录，有则表示不是第一次设置循环次数为20次
+    if newest:
+        count = 20
+    for _ in range(count):
+        record, lastId, flag_stop = get_trading_record(spuId, lastId, _article_number, newest)
+        # 插入数据库
+        insert_sql = 'INSERT INTO org_purchase_record VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s)'
+        db.insertDataList(insert_sql, record)
+        # 判断是否停止
+        if flag_stop:
+            break
+
+        # 随机随眠一到三秒
+        time.sleep(random.randint(1, 3))
+
+
+def get_trading_record(spuId, lastId, _article_number, newest):
+    """
+    根据spuId获取交易记录
+    :param newest: 最新交易记录
+    :param _article_number:货号
+    :param spuId: 得物唯一标识
+    :param lastId: 下一页标识
+    :return:返回交易记录和下一页标识
+    """
+    recordList = []
+    # 标识是否还要继续爬取
+    flag_stop = False
+    data = {
+        "spuId": spuId,
+        "limit": '20',
+        "lastId": lastId,
+        "sourceApp": "app"
+    }
+    data = request_util.add_sign(data)
+    url = 'https://app.dewu.com/api/v1/h5/commodity/fire/last-sold-list'
+    res = requests.post(url=url, json=data, headers=request_util.get_header('record'), verify=False)
+    if res.status_code == 200:
+        all_data = res.json()
+        lastId = all_data.get('data').get('lastId')
+        data_list = all_data.get('data').get('list')
+        for d in data_list:
+            # 判断是否是当天的数据 如果是则放入集合，如果不是则跳出循环标识不再获取交易记录
+            if newest:
+                if compareRecord(newest, d):
+                    flag_stop = True
+                    break
+            formatTime = d['formatTime']
+            formatTime = refactorFormatTime(formatTime)
+            record = (
+                None,
+                spuId,
+                _article_number,
+                d['userName'],
+                formatTime,
+                d['price'] / 100,
+                d['orderSubTypeName'],
+                d['propertiesValues'],
+                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            )
+            recordList.append(record)
+    return recordList[::-1], lastId, flag_stop
+
+
+def compareRecord(dbData, record):
+    """
+    比较两条记录是否相等
+    :param dbData:
+    :param record:
+    :return:
+    """
+    for i in range(len(record)):
+        if i == 0 or i == 3 or i == 7:
+            continue
+        if i == 4:
+            price = dbData[i]
+            if not int(price) == record[i]:
+                return False
+        if not dbData[i] == record[i]:
+            return False
+    return True
+
+
+def refactorFormatTime(formatTime):
+    """
+    重构交易时间返回数据类型yyyy-MM-dd
+    :param formatTime:
+    :return:
+    """
+    y = time.strftime("%Y", time.localtime())
+    if '前' in formatTime:
+        if '小时' in formatTime:
+            h = formatTime[0:formatTime.find('小')]
+            newTime = (datetime.datetime.now() + datetime.timedelta(hours=-int(h))).strftime("%Y-%m-%d")
+        else:
+            newTime = datetime.datetime.now().strftime("%Y-%m-%d")
+        if '天' in formatTime:
+            dd = formatTime[0:formatTime.find('天')]
+            newTime = (datetime.datetime.now() + datetime.timedelta(days=-int(dd))).strftime("%Y-%m-%d")
+    else:
+        newTime = y + '-' + formatTime.replace('月', '-').replace('日', '')
+    return newTime
+
+
+def downloadImg(imgUrl, fileName):
+    img_path = config.getValue('img_path')
+    # 判断文件夹是否存在
+    if not os.path.exists(img_path):
+        os.makedirs(img_path)
+    # 发请求并保存图片
+    suffix = os.path.splitext(imgUrl)[1]
+    if suffix == '':
+        suffix = '.jpg'
+    r = requests.get(url=imgUrl, stream=True)
+    if r.status_code == 200:
+        all_name = fileName + suffix
+        open(img_path + all_name, 'wb').write(r.content)
+        return all_name
+    else:
+        return None
+
+
 if __name__ == '__main__':
-    get_info('1030812')
+    # get_info('1030812')
+    get_record('1030812')
