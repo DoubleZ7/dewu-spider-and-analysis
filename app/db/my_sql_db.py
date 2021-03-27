@@ -21,11 +21,28 @@ class mysqlDb:
         获取mysql数据库连接
         :return:
         """
-        return pymysql.connect(
-            host=self.host, user=self.username, passwd=self.password, port=self.port, db=self.db, charset=self.charset
-        )
+        con = None
+        try:
+            con = pymysql.connect(
+                host=self.host, user=self.username, passwd=self.password, port=self.port, db=self.db, charset=self.charset
+            )
+        except Exception as e:
+            log.error(e)
+            log.info("获取数据库连接失败,正在尝试重新连接...")
+            for _ in range(5):
+                try:
+                    con = pymysql.connect(
+                        host=self.host, user=self.username, passwd=self.password, port=self.port, db=self.db,
+                        charset=self.charset
+                    )
+                    log.info("连接成功！")
+                    break
+                except Exception as e:
+                    log.error(e)
+        return con
 
-    def getCursor(self, connect):
+    @staticmethod
+    def getCursor(connect):
         """
         获取数据库游标
         :param connect:
