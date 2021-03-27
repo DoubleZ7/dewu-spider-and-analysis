@@ -1,6 +1,6 @@
 import pymysql
-from log import Logger
-from configUtil import ConfigUtil
+from app.log import Logger
+from app.configUtil import ConfigUtil
 
 log = Logger().log()
 config = ConfigUtil()

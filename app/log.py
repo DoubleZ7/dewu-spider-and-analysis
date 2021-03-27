@@ -1,14 +1,19 @@
 import yaml
 import logging
 import datetime
+import os
 
 
 class Logger:
     """自定义封装logging模块"""
 
     def __init__(self, default_level=logging.INFO):
-        self.logger = logging.getLogger('__name__')
+        # 加载配置文件地址
+        cur_path = os.path.dirname(__file__)
+        self.config_path = cur_path + "/config.yaml"
+
         # 初始化一个logger
+        self.logger = logging.getLogger('__name__')
         self.default_level = default_level
         logger_main_level, logger_file_level, logger_console_level = self.config()
         self.logger.setLevel(logger_main_level)
@@ -37,7 +42,8 @@ class Logger:
         :return: 返回配置中读取的level
         """
         try:
-            with open('config.yaml', 'r', encoding='utf-8') as f:
+
+            with open(self.config_path, 'r', encoding='utf-8') as f:
                 global config_data
                 config_data = yaml.load(f, Loader=yaml.FullLoader)
         except IOError as e:
@@ -58,7 +64,7 @@ class Logger:
         :return:
         """
         try:
-            with open('config.yaml', 'r', encoding='utf-8') as f:
+            with open(self.config_path, 'r', encoding='utf-8') as f:
                 global config_data
                 config_data = yaml.load(f, Loader=yaml.FullLoader)
         except IOError:

@@ -1,13 +1,16 @@
 import yaml
 import random
-from log import Logger
+import os
+
+from app.log import Logger
 
 log = Logger().log()
 
 
 class ConfigUtil:
     def __init__(self):
-        self.configPath = "./config.yaml"
+        cur_path = os.path.dirname(__file__)
+        self.configPath = cur_path + "/config.yaml"
 
     def readYaml(self):
         # read config from yaml document
@@ -28,6 +31,5 @@ class ConfigUtil:
 
 
 if __name__ == '__main__':
-    config = ConfigUtil()
-    data = config.getValue('db')['host']
-    print(data)
+    curPath = os.path.dirname(__file__)
+    print(curPath)
