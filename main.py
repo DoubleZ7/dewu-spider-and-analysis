@@ -1,7 +1,6 @@
 from apscheduler.schedulers.blocking import BlockingScheduler
 from app import de_wu_spider
 from app.log import Logger
-from app.util.zhi_ma_ip import ZhiMaIp
 
 log = Logger().logger
 
@@ -15,7 +14,4 @@ def run():
 
 
 if __name__ == '__main__':
-    # run()
-    zm = ZhiMaIp()
-    proxies = zm.getOneProxies()
-    print(proxies)
+    run()

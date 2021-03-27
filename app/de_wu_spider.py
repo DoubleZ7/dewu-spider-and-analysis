@@ -322,6 +322,19 @@ def downloadImg(imgUrl, fileName, proxies):
         return None
 
 
+def query_by_key(key):
+    pram = {
+        'title': key,
+        'page': '0',
+        'sortType': '0',
+        'sortMode': '1',
+        'limit': '20',
+        'showHot': '1',
+        'isAggr': '1'
+    }
+    d = request_util.add_sign(pram)
+
+
 def run():
     log.info("正在启动得物爬虫程序...")
     log.info("获取代理...")

@@ -1,5 +1,6 @@
 # coding=utf-8
 import requests
+import time
 from app.configUtil import ConfigUtil
 
 config = ConfigUtil()
@@ -10,9 +11,9 @@ class ZhiMaIp:
         self.url = config.getValue("zhi_ma_ip_url")
         self.addWhiteListIpUrl = config.getValue("white_list_ip_url")
 
-    def getOneProxies(self):
+    def send_request(self):
         """
-        获取一个代理服务器
+        发送请求获取一个代理
         :return:
         """
         res = requests.get(self.url)
@@ -26,13 +27,37 @@ class ZhiMaIp:
         proxyMeta = "http://%(proxies)s" % {
             "proxies": hostAndPort
         }
+
         proxies = {
             "https": proxyMeta,
+            "http": proxyMeta
         }
-        # 检测代理活性和状态
-        res = requests.get(url="http://icanhazip.com/", timeout=8, proxies=proxies)
-        print(res.text)
         return proxies
+
+    def getOneProxies(self):
+        """
+        获取一个代理服务器
+        :return:
+        """
+        while True:
+            proxies = self.send_request()
+            res = self.check_proxies(proxies)
+            if res:
+                break
+        return proxies
+
+    @staticmethod
+    def check_proxies(proxies):
+        """
+        检测代理活性和状态
+        :param proxies:
+        :return:
+        """
+        # 检测代理活性和状态
+        start = time.clock()
+        res = requests.get(url="http://icanhazip.com/", timeout=8, proxies=proxies).text.replace('\n', '')
+        end = time.clock()
+        return (end - start) < 2 and res in str(proxies)
 
     def addWhiteList(self):
         """
