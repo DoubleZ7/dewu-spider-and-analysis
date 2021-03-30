@@ -36,23 +36,8 @@ class DeWuSpider:
         }
         data = request_util.add_sign(data)
         url = 'https://app.dewu.com/api/v1/h5/index/fire/flow/product/detail'
-        res = None
-        try:
-            res = requests.post(url, json=data, headers=request_util.get_header('info'), verify=False, proxies=self.proxies)
-        except Exception as e:
-            self.log.error(e)
-            self.log.info(f"spuId:{spuId},发送请求失败，正在尝试重新请求...")
-            for i in range(5):
-                self.log.info(f"正在尝试第{i + 1}次请求...")
-                self.proxies = self.zm.getOneProxies()
-                self.log.info(f"当前代理为{self.proxies}")
-                try:
-                    res = requests.post(url, json=data, headers=request_util.get_header('info'), verify=False, proxies=self.proxies)
-                    self.log.info(f"第{i + 1}次请求成功...")
-                    break
-                except Exception as e:
-                    self.log.error(e)
-                    self.log.info(f"第{i + 1}次请求失败...")
+        # 发送请求
+        res = self.try_err_send_request('info', data, url)
         if res.status_code == 200:
             self.log.info(f"spuId:{spuId},发送请求成功，正在解析数据...")
             data = res.json().get('data')
@@ -217,24 +202,8 @@ class DeWuSpider:
         }
         data = request_util.add_sign(data)
         url = 'https://app.dewu.com/api/v1/h5/commodity/fire/last-sold-list'
-        res = None
-        try:
-            res = requests.post(url=url, json=data, headers=request_util.get_header('record'), verify=False, proxies=self.proxies)
-        except Exception as e:
-            self.log.error(e)
-            self.log.info(f"spuId:{spuId}交易记录,发送请求失败，正在尝试重新请求...")
-            for i in range(5):
-                self.log.info(f"正在尝试第{i + 1}次请求...")
-                self.proxies = self.zm.getOneProxies()
-                self.log.info(f"当前代理为{self.proxies}")
-                try:
-                    res = requests.post(url=url, json=data, headers=request_util.get_header('record'), verify=False, proxies=self.proxies)
-                    self.log.info(f"第{i + 1}次请求成功...")
-                    break
-                except Exception as e:
-                    self.log.error(e)
-                    self.log.info(f"第{i + 1}次请求失败...")
-
+        # 发送请求
+        res = self.try_err_send_request('record', data, url)
         if res.status_code == 200:
             all_data = res.json()
             lastId = all_data.get('data').get('lastId')
@@ -349,8 +318,14 @@ class DeWuSpider:
         else:
             return None
 
-    @staticmethod
-    def query_by_key(key):
+    def query_by_key(self, key):
+        """
+        根据key查询数据
+        :param key: 参数
+        :return:
+        """
+        self.log.info(f"正在根据关键词【{key}】查看结果")
+        query_res = []
         pram = {
             'title': key,
             'page': '0',
@@ -360,7 +335,58 @@ class DeWuSpider:
             'showHot': '1',
             'isAggr': '1'
         }
-        d = request_util.add_sign(pram)
+        data = request_util.add_sign(pram)
+        url = "https://app.dewu.com/api/v1/h5/search/fire/search/list"
+        res = self.try_err_send_request('search', data, url)
+        if res.status_code == 200:
+            self.log.info(f"根据关键词【{key}】查询请求成功！")
+            all_data = res.json()
+            for entity in all_data['data']['productList']:
+                query_res.append(entity)
+        return query_res
+
+    def try_err_send_request(self, send_type, data, url):
+        """
+        发送请求
+        :param send_type:发送类型
+        :param data:参数
+        :param url:请求路径
+        :return:
+        """
+        res = None
+        try:
+            res = self.send_request(send_type, data, url)
+        except Exception as e:
+            self.log.error(e)
+            self.log.info(f",发送请求失败，正在尝试重新请求...")
+            for i in range(5):
+                self.log.info(f"正在尝试第{i + 1}次请求...")
+                self.proxies = self.zm.getOneProxies()
+                self.log.info(f"当前代理为{self.proxies}")
+                try:
+                    res = self.send_request(send_type, data, url)
+                    self.log.info(f"第{i + 1}次请求成功...")
+                    break
+                except Exception as e:
+                    self.log.error(e)
+                    self.log.info(f"第{i + 1}次请求失败...")
+        return res
+
+    def send_request(self, send_type, data, url):
+        """
+        单独发送请求
+        :param send_type: 请求类型
+        :param url: 请求路径
+        :param data: 请求参数
+        :return:
+        """
+        if 'search' == send_type:
+            res = requests.get(url=url, params=data, headers=request_util.get_header(send_type),
+                               verify=False, timeout=10, proxies=self.proxies)
+        else:
+            res = requests.post(url=url, json=data, headers=request_util.get_header(send_type),
+                                verify=False, timeout=10, proxies=self.proxies)
+        return res
 
     def run(self):
         """
@@ -368,21 +394,23 @@ class DeWuSpider:
         :return:
         """
         self.log.info("正在启动得物爬虫程序...")
-        start = time.clock()
         # 获取代理
         self.log.info(f"当前代理:{self.proxies}")
-
-        # 查询spuId列表
-        spu_id_sql = 'SELECT * FROM org_spu_id'
-        spu_id_list = self.db.query(spu_id_sql)
-        for spu_id in spu_id_list:
-            if spu_id[2] == 1:
-                self.get_info(spu_id[1])
+        # 查询所有待查询的商品列表
+        commodity_sql = 'SELECT * FROM org_all_commodity'
+        commodity_list = self.db.query(commodity_sql)
+        for commodity in commodity_list:
+            self.log.info(f"开始执行【{commodity[2]}】商品")
+            spu_id = commodity[1]
+            if commodity[3] == 1:
+                data = self.query_by_key(commodity[2])[0]
+                spu_id = data['spuId']
+                self.get_info(str(spu_id))
                 # 修改数据库状态
-                update_sql = f'UPDATE org_spu_id SET is_new = 0 WHERE id = {spu_id[0]}'
+                update_sql = f'UPDATE org_all_commodity SET is_new = 0,spu_id = {spu_id} WHERE id = {commodity[0]}'
                 self.db.executeSql(update_sql)
-            self.get_record(spu_id[1])
+            self.get_record(spu_id)
+            self.log.info(f"商品【{commodity[2]}】执行执行完毕！")
 
         now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        end = time.clock()
-        self.log.info(f"{now}程序结束,耗时：{end - start}秒")
+        self.log.info(f"{now}程序结束")

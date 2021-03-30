@@ -2,8 +2,10 @@
 import requests
 import time
 from app.configUtil import ConfigUtil
+from app.log import Logger
 
 config = ConfigUtil()
+log = Logger().logger
 
 
 class ZhiMaIp:
@@ -16,7 +18,20 @@ class ZhiMaIp:
         发送请求获取一个代理
         :return:
         """
-        res = requests.get(self.url)
+        res = None
+        try:
+            res = requests.get(self.url, timeout=3)
+        except Exception as e:
+            log.error(e)
+            log.info("代理请求失败，尝试重新申请...")
+            for i in range(5):
+                try:
+                    res = requests.get(self.url, timeout=3)
+                    log.info(f"第{i + 1}次代理请求失败！")
+                    break
+                except Exception as e:
+                    log.error(e)
+                    log.info(f"第{i + 1}次代理请求成功！")
         hostAndPort = res.text
         hostAndPort = hostAndPort.replace('\n', '').replace('\r', '')
         if len(hostAndPort) > 30:
@@ -39,12 +54,12 @@ class ZhiMaIp:
         获取一个代理服务器
         :return:
         """
-        while True:
-            proxies = self.send_request()
-            res = self.check_proxies(proxies)
-            if res:
-                break
-        return proxies
+        # while True:
+        #     proxies = self.send_request()
+        #     res = self.check_proxies(proxies)
+        #     if res:
+        #         break
+        return self.send_request()
 
     @staticmethod
     def check_proxies(proxies):
