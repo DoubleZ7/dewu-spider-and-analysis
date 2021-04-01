@@ -205,6 +205,7 @@ class DeWuSpider:
         # 发送请求
         res = self.try_err_send_request('record', data, url)
         if res.status_code == 200:
+            self.log.info("交易记录请求成功，正在解析交易数据。。。")
             all_data = res.json()
             lastId = all_data.get('data').get('lastId')
             # 判断下一次请求是否已经无数据，如果是返回空集合与停止循环标识
@@ -382,10 +383,10 @@ class DeWuSpider:
         """
         if 'search' == send_type:
             res = requests.get(url=url, params=data, headers=request_util.get_header(send_type),
-                               verify=False, timeout=10, proxies=self.proxies)
+                               verify=False, timeout=(10, 10), proxies=self.proxies)
         else:
             res = requests.post(url=url, json=data, headers=request_util.get_header(send_type),
-                                verify=False, timeout=10, proxies=self.proxies)
+                                verify=False, timeout=(10, 10), proxies=self.proxies)
         return res
 
     def run(self):
@@ -404,8 +405,8 @@ class DeWuSpider:
             spu_id = commodity[1]
             if commodity[3] == 1:
                 data = self.query_by_key(commodity[2])[0]
-                spu_id = data['spuId']
-                self.get_info(str(spu_id))
+                spu_id = str(data['spuId'])
+                self.get_info(spu_id)
                 # 修改数据库状态
                 update_sql = f'UPDATE org_all_commodity SET is_new = 0,spu_id = {spu_id} WHERE id = {commodity[0]}'
                 self.db.executeSql(update_sql)
