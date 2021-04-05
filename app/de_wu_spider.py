@@ -298,7 +298,7 @@ class DeWuSpider:
             suffix = '.jpg'
         r = None
         try:
-            r = requests.get(url=imgUrl, stream=True, proxies=self.proxies)
+            r = requests.get(url=imgUrl, stream=True, timeout=(10, 10), proxies=self.proxies)
         except Exception as e:
             self.log.error(e)
             self.log.info(f"下载图片{imgUrl}请求失败,开始重新发起请求")
@@ -306,7 +306,7 @@ class DeWuSpider:
                 try:
                     self.proxies = self.zm.getOneProxies()
                     self.log.info(f"当前代理为{self.proxies}")
-                    r = requests.get(url=imgUrl, stream=True, proxies=self.proxies)
+                    r = requests.get(url=imgUrl, stream=True, timeout=(10, 10), proxies=self.proxies)
                     self.log.info(f"第{i + 1}次尝试成功")
                     break
                 except Exception as e:
