@@ -23,7 +23,8 @@ db:
 
 
 img_path: /Users/yangshanze/deWu/file/img/
-# img_path: /home/deWu/file/img/
+# analysis_img_path: /home/deWu/file/analysis_img/
+analysis_img_path: /Users/yangshanze/deWu/file/analysis_img/
 
 # zhiMaIPUrl: "http://http.tiqu.alicdns.com/getip3?num=1&type=1&pro=&city=0&yys=0&port=1&time=1&ts=0&ys=0&cs=0&lb=1&sb=0&pb=4&mr=1&regions=&gm=4"
 zhi_ma_ip_url: "http://http.tiqu.alicdns.com/getip3?num=1&type=1&pro=&city=0&yys=0&port=11&time=1&ts=0&ys=0&cs=0&lb=1&sb=0&pb=4&mr=1&regions=&gm=4"

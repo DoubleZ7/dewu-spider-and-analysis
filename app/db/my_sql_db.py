@@ -1,12 +1,13 @@
 import pymysql
 from app.log import Logger
 from app.configUtil import ConfigUtil
+from sqlalchemy import create_engine
 
 log = Logger().log()
 config = ConfigUtil()
 
 
-class mysqlDb:
+class MySqlDb:
     def __init__(self):
         self.dbConfig = config.getValue('db')
         self.host = self.dbConfig['host']
@@ -49,6 +50,13 @@ class mysqlDb:
         :return:
         """
         return connect.cursor()
+
+    def getEngine(self):
+        """
+        获取pandas需要的Engine
+        :return:
+        """
+        return create_engine(f'mysql+pymysql://{self.username}:{self.password}@{self.host}:{self.port}/{self.db}')
 
     def insertDataList(self, sql, data):
         """

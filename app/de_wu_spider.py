@@ -5,7 +5,7 @@ import datetime
 import random
 
 from app.util import request_util
-from app.db.my_sql_db import mysqlDb
+from app.db.my_sql_db import MySqlDb
 from app.configUtil import ConfigUtil
 from app.util.zhi_ma_ip import ZhiMaIp
 from app.log import Logger
@@ -13,7 +13,7 @@ from app.log import Logger
 
 class DeWuSpider:
     def __init__(self):
-        self.db = mysqlDb()
+        self.db = MySqlDb()
         self.config = ConfigUtil()
         self.log = Logger().logger
         self.zm = ZhiMaIp()
