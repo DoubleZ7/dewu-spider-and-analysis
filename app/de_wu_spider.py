@@ -9,6 +9,7 @@ from app.db.my_sql_db import MySqlDb
 from app.configUtil import ConfigUtil
 from app.util.zhi_ma_ip import ZhiMaIp
 from app.log import Logger
+from concurrent.futures import ThreadPoolExecutor
 
 
 class DeWuSpider:
@@ -18,6 +19,7 @@ class DeWuSpider:
         self.log = Logger().logger
         self.zm = ZhiMaIp()
         self.proxies = self.zm.getOneProxies()
+        self.thread_count = 4
 
         # 移除跳过认证警告
         requests.packages.urllib3.disable_warnings()
@@ -53,8 +55,8 @@ class DeWuSpider:
                 parameters = self.get_parameter(parameterList)
 
                 # 图片
-                image_and_txt = data.get("imageAndText")
-                imgList = self.get_img_url(image_and_txt, articleNumber)
+                # image_and_txt = data.get("imageAndText")
+                # imgList = self.get_img_url(image_and_txt, articleNumber)
 
                 # 下载logo
                 logoUrl = self.downloadImg(pageDetail["logoUrl"], articleNumber)
@@ -82,8 +84,8 @@ class DeWuSpider:
                 detail_sql = 'INSERT INTO org_detail VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'
                 self.db.insertData(detail_sql, detail)
                 # 插入详情图片
-                insert_img_sql = 'INSERT INTO org_detail_img VALUES(%s, %s, %s, %s, %s, %s)'
-                self.db.insertDataList(insert_img_sql, imgList)
+                # insert_img_sql = 'INSERT INTO org_detail_img VALUES(%s, %s, %s, %s, %s, %s)'
+                # self.db.insertDataList(insert_img_sql, imgList)
                 self.log.info(f"spuId:{spuId},入库结束...")
 
     @staticmethod
@@ -401,17 +403,41 @@ class DeWuSpider:
         commodity_sql = 'SELECT * FROM org_all_commodity'
         commodity_list = self.db.query(commodity_sql)
         for commodity in commodity_list:
-            self.log.info(f"开始执行【{commodity[2]}】商品")
-            spu_id = commodity[1]
-            if commodity[3] == 1:
-                data = self.query_by_key(commodity[2])[0]
-                spu_id = str(data['spuId'])
-                self.get_info(spu_id)
-                # 修改数据库状态
-                update_sql = f'UPDATE org_all_commodity SET is_new = 0,spu_id = {spu_id} WHERE id = {commodity[0]}'
-                self.db.executeSql(update_sql)
-            self.get_record(spu_id)
-            self.log.info(f"商品【{commodity[2]}】执行执行完毕！")
+            self.do_one_commodity_data(commodity)
+        now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        self.log.info(f"{now}程序结束")
+
+    def do_one_commodity_data(self, commodity):
+        """
+        获取单个商品的数据
+        :param commodity:
+        :return:
+        """
+        self.log.info(f"开始执行【{commodity[2]}】商品")
+        spu_id = commodity[1]
+        if commodity[3] == 1:
+            data = self.query_by_key(commodity[2])[0]
+            spu_id = str(data['spuId'])
+            self.get_info(spu_id)
+            # 修改数据库状态
+            update_sql = f'UPDATE org_all_commodity SET is_new = 0,spu_id = {spu_id} WHERE id = {commodity[0]}'
+            self.db.executeSql(update_sql)
+        self.get_record(spu_id)
+        self.log.info(f"商品【{commodity[2]}】执行执行完毕！")
+
+    def thread_run(self):
+        """
+        多线程爬虫启动
+        :return:
+        """
+        self.log.info("正在启动多线程得物爬虫程序...")
+        # 获取代理
+        self.log.info(f"当前代理:{self.proxies}")
+        # 查询所有待查询的商品列表
+        commodity_sql = 'SELECT * FROM org_all_commodity'
+        commodity_list = self.db.query(commodity_sql)
+        with ThreadPoolExecutor(max_workers=self.thread_count) as executor:
+            executor.map(self.do_one_commodity_data, commodity_list)
 
         now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         self.log.info(f"{now}程序结束")
