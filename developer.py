@@ -1,5 +1,5 @@
-from app.data_analysis.analysis_excel import AnalysisExcel
+from app.data_analysis.analysis import Analysis
 
 
-ae = AnalysisExcel("CZ3589-001", "All")
-ae.get_repeat_num()
+ae = Analysis("CZ3589-001")
+ae.get_price_volume(chart_type="尺码")
