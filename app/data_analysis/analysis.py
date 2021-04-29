@@ -8,24 +8,38 @@ from app.configUtil import ConfigUtil
 
 class Analysis:
     def __init__(self, article_number, _type="Day"):
-        self.engine = MySqlDb().getEngine()
+        self.db = MySqlDb()
+        self.engine = self.db.getEngine()
         self.article_number = article_number
         # 保存图片文件夹
         self.save_img_path = ConfigUtil().getValue("analysis_img_path") + self.article_number
         if not os.path.exists(self.save_img_path):
             os.makedirs(self.save_img_path)
+        # 查询数据
         sql = f"SELECT * FROM org_purchase_record WHERE article_number = '{article_number}'"
         if _type == "Day":
             sql += "and format_time >= DATE_SUB(DATE_FORMAT(NOW(), '%Y-%m-%d'), INTERVAL 30 DAY)"
         elif _type == "Num":
             sql += "LIMIT 1000"
-        self.data = pd.read_sql_query(sql, self.engine)
+        self.all_data = pd.read_sql_query(sql, self.engine)
         # 删除求购
-        self.data = self.data.drop(self.data[self.data.order_sub_type_name == "求购"].index)
+        self.data = self.all_data.drop(self.all_data[self.all_data.order_sub_type_name == "求购"].index)
+        # 获取求购数据
+        self.ask_to_buy = self.all_data[self.all_data["order_sub_type_name"] == "求购"]
         # 获取时间
         self.date = self.data.format_time.drop_duplicates().sort_values(ascending=False).values
         # 获取尺码
         self.size = self.data.properties_values.drop_duplicates().sort_values(ascending=False).values
+
+        # 基础属性
+        self.max_price = self.data.price.max()
+        self.min_price = self.data.price.min()
+        self.avg_price = self.data.price.mean()
+        self.all_volume = self.data.shape[0]
+
+        # 图片属性
+        self.image_wide = 15
+        self.image_high = 10
 
     def get_price_volume(self, chart_type="日期"):
         """
@@ -37,7 +51,7 @@ class Analysis:
         counts = self.data.groupby('format_time' if chart_type == "日期" else 'properties_values')['price'].count().values
 
         # 绘图
-        fig = plt.figure(figsize=(15, 10))
+        fig = plt.figure(figsize=(self.image_wide, self.image_high))
         fig.suptitle(f"{chart_type}-价格-销量趋势图(30天)")
         p = fig.add_subplot(111)
         p.set_ylabel("价格")
@@ -91,12 +105,55 @@ class Analysis:
         plt.ylabel("重复交易数量")
         plt.savefig(self.save_img_path + "/重复交易量试图.jpg")
 
-    def get_recommend_size(self):
+    def update_info(self):
         """
-        获取推荐尺码
+        更新基础属性
         :return:
         """
-        pass
+        # 获取数据
+        recommended_size = self.data.groupby("properties_values")["id"].count().reset_index(name="count") \
+            .sort_values("count", ascending=False).head(3).properties_values.values
+        s = ",".join(recommended_size)
+        print(s)
+        # 持久化
+        # query_info_sql = f"SELECT * FROM org_data_analysis_info WHERE article_number = '{self.article_number}'"
+        # info = self.db.getOne(query_info_sql)
+        # if info:
+        #     # 更新
+        #     pass
+        # else:
+        #     # 插入
+        #     pass
+
+    def get_ask_to_buy(self):
+        """
+        绘制求购数据
+        :return:
+        """
+        # 获取数据
+        size = self.ask_to_buy.groupby("properties_values")["id"].count()
+        date = self.ask_to_buy.groupby("format_time")["id"].count()
+
+        size_index = size.index.values
+        date_index = pd.to_datetime(date.index.values, format="%Y-%m-%d")
+
+        size_data = size.values
+        date_data = date.values
+
+        # 绘图
+        fig = plt.figure(figsize=(self.image_wide, self.image_high))
+        size_plt = fig.add_subplot(211)
+        size_plt.set_title("尺码-求购量图")
+        size_plt.set_ylabel("求购量")
+        size_plt.set_xlabel("尺码")
+        size_plt.bar(size_index, size_data)
+
+        date_plt = fig.add_subplot(212)
+        date_plt.set_title("日期-求购量图")
+        date_plt.set_ylabel("求购量")
+        date_plt.set_xlabel("日期")
+        date_plt.bar(date_index, date_data)
+        plt.show()
 
     @staticmethod
     def __auto_text(rects):
