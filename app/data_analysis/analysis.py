@@ -1,15 +1,19 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import time
 
 from app.db.my_sql_db import MySqlDb
 from app.configUtil import ConfigUtil
+from decimal import Decimal
+from app.log import Logger
 
 
 class Analysis:
     def __init__(self, article_number, _type="Day"):
         self.db = MySqlDb()
         self.engine = self.db.getEngine()
+        self.log = Logger().logger
         self.article_number = article_number
         # 保存图片文件夹
         self.save_img_path = ConfigUtil().getValue("analysis_img_path") + self.article_number
@@ -31,15 +35,13 @@ class Analysis:
         # 获取尺码
         self.size = self.data.properties_values.drop_duplicates().sort_values(ascending=False).values
 
-        # 基础属性
-        self.max_price = self.data.price.max()
-        self.min_price = self.data.price.min()
-        self.avg_price = self.data.price.mean()
-        self.all_volume = self.data.shape[0]
-
         # 图片属性
         self.image_wide = 15
         self.image_high = 10
+
+        # plt.rcParams['font.sans-serif'] = ['KaiTi', 'SimHei', 'FangSong']  # 汉字字体,优先使用楷体，如果找不到楷体，则使用黑体
+        # plt.rcParams['font.size'] = 12  # 字体大小
+        # plt.rcParams['axes.unicode_minus'] = False  # 正常显示负号
 
     def get_price_volume(self, chart_type="日期"):
         """
@@ -62,7 +64,10 @@ class Analysis:
         ca = c.bar(self.date if chart_type == "日期" else self.size, counts, alpha=0.3)
         fig.legend(['平均价格', '交易量'])
         self.__auto_text(ca)
-        plt.show()
+
+        # 修改保存路径
+        img_path = "/date_price_volume.jpg" if chart_type == "日期" else "/size_price_volume.jpg"
+        plt.savefig(self.save_img_path + img_path)
 
     def get_user_repeat(self):
         """
@@ -76,7 +81,7 @@ class Analysis:
         plt.xlabel("用户名称")
         plt.ylabel("数量")
         plt.xticks(rotation=45, fontsize=9, verticalalignment='top', fontweight='light')
-        plt.show()
+        plt.savefig(self.save_img_path + "/user_repeat.jpg")
 
     def get_repeat_num(self):
         """
@@ -103,7 +108,7 @@ class Analysis:
         plt.title("重复交易量试图")
         plt.xlabel("重复频率")
         plt.ylabel("重复交易数量")
-        plt.savefig(self.save_img_path + "/重复交易量试图.jpg")
+        plt.savefig(self.save_img_path + "/repeat_num.jpg")
 
     def update_info(self):
         """
@@ -113,17 +118,46 @@ class Analysis:
         # 获取数据
         recommended_size = self.data.groupby("properties_values")["id"].count().reset_index(name="count") \
             .sort_values("count", ascending=False).head(3).properties_values.values
-        s = ",".join(recommended_size)
-        print(s)
+        r_size = ",".join(recommended_size)
+
+        # 基础属性
+        max_price = self.data.price.max()
+        min_price = self.data.price.min()
+        avg_price = round(self.data.price.mean(), 2)
+        all_volume = self.data.shape[0]
+
+        # 计算溢价
+        auth_price = self.db.getOne(f"SELECT auth_price FROM org_detail WHERE article_number = '{self.article_number}'")[0]
+        premium = round((Decimal(avg_price) - auth_price) / auth_price * 100, 2)
+
         # 持久化
-        # query_info_sql = f"SELECT * FROM org_data_analysis_info WHERE article_number = '{self.article_number}'"
-        # info = self.db.getOne(query_info_sql)
-        # if info:
-        #     # 更新
-        #     pass
-        # else:
-        #     # 插入
-        #     pass
+        query_info_sql = f"SELECT * FROM org_data_analysis_info WHERE article_number = '{self.article_number}'"
+        info = self.db.getOne(query_info_sql)
+        if info:
+            # 更新
+            update_sql = f"UPDATE org_data_analysis_info " \
+                         f"SET max_price = {max_price}, avg_price = {avg_price}, min_price = {min_price}, " \
+                         f"premium = {premium},all_volume = {all_volume},recommended_size = '{r_size}'," \
+                         f"update_time = '{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}' " \
+                         f"WHERE article_number = '{self.article_number}'"
+            self.db.executeSql(update_sql)
+        else:
+            # 插入
+            info = (
+                None,
+                self.article_number,
+                0,
+                max_price,
+                avg_price,
+                min_price,
+                premium,
+                all_volume,
+                r_size,
+                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            )
+            insert_sql = "INSERT INTO org_data_analysis_info VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            self.db.insertData(sql=insert_sql, data=info)
 
     def get_ask_to_buy(self):
         """
@@ -153,7 +187,34 @@ class Analysis:
         date_plt.set_ylabel("求购量")
         date_plt.set_xlabel("日期")
         date_plt.bar(date_index, date_data)
-        plt.show()
+        plt.savefig(self.save_img_path + "/ask_to_buy.jpg")
+
+    def run_analysis(self):
+        """
+        数据分析
+        :return:
+        """
+        # 修改信息
+        self.log.info(f"正在更新【{self.article_number}】交易信息")
+        self.update_info()
+        self.log.info(f"【{self.article_number}】交易信息更新完成！")
+
+        # 生成日期价格图
+        self.log.info(f"正在生成【{self.article_number}】日期价格图")
+        self.get_price_volume()
+        self.log.info(f"【{self.article_number}】日期价格图生成完毕！")
+
+        # 生成尺码价格图
+        self.log.info(f"正在生成【{self.article_number}】尺码价格图")
+        self.get_price_volume(chart_type="尺码")
+        self.log.info(f"【{self.article_number}】尺码价格图生成完毕！")
+
+        # 生成求购图
+        self.log.info(f"正在生成【{self.article_number}】求购图")
+        self.get_ask_to_buy()
+        self.log.info(f"【{self.article_number}】求购图生成完毕")
+        # 生成推荐尺码移动平均线图
+        # 生成推荐尺码K线图
 
     @staticmethod
     def __auto_text(rects):

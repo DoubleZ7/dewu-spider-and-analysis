@@ -9,6 +9,7 @@ from app.db.my_sql_db import MySqlDb
 from app.configUtil import ConfigUtil
 from app.util.zhi_ma_ip import ZhiMaIp
 from app.log import Logger
+from app.data_analysis.analysis_executor import AnalysisExecutor
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -423,6 +424,13 @@ class DeWuSpider:
             update_sql = f'UPDATE org_all_commodity SET is_new = 0,spu_id = {spu_id} WHERE id = {commodity[0]}'
             self.db.executeSql(update_sql)
         self.get_record(spu_id)
+
+        # 进行第一轮数据分析
+        if commodity[3] == 1:
+            self.log.info(f"开始对【{commodity[2]}】商品进行第一轮数据分析")
+            an = AnalysisExecutor()
+            an.update_one_date(commodity[2])
+            self.log.info(f"对【{commodity[2]}】商品第一轮数据分析完毕")
         self.log.info(f"商品【{commodity[2]}】执行执行完毕！")
 
     def thread_run(self):
