@@ -130,14 +130,20 @@ class MySqlDb:
         :param sql:
         :return:
         """
-        if sql is not None and sql != " ":
-            con = self.getConnect()
-            cur = self.getCursor(con)
-            cur.execute(sql)
+        con = self.getConnect()
+        cur = self.getCursor(con)
+        try:
+            if sql is not None and sql != " ":
+                cur.execute(sql)
+            else:
+                log.info("执行sql不能为空")
+        except Exception as e:
+            log.error(e)
+            con.rollback()
+        else:
             con.commit()
+        finally:
             # 关闭连接，关闭游标
             cur.close()
             con.close()
-            log.info("sql执行成功")
-        else:
-            log.info("执行sql不能为空")
+

@@ -17,13 +17,17 @@ class AnalysisExecutor:
         更新所有商品信息数据
         :return:
         """
-        self.log.info("正在启动多线程数据分析程序...")
+        self.log.info("正在启动单线程数据分析程序...")
         # 查询所有已有记录的商品列表
         commodity_sql = 'SELECT * FROM org_all_commodity WHERE is_new = 0'
         commodity_list = self.db.query(commodity_sql)
         article_number_list = [com[2] for com in commodity_list]
-        with ThreadPoolExecutor(max_workers=self.thread_count) as executor:
-            executor.map(self.update_one_date, article_number_list)
+        # with ThreadPoolExecutor(max_workers=self.thread_count) as executor:
+        #     executor.map(self.update_one_date, article_number_list)
+
+        for commodity in article_number_list:
+            self.update_one_date(commodity)
+
         now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         self.log.info(f"{now}程序结束")
 
