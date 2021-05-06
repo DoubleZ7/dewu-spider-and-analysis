@@ -10,21 +10,22 @@ from app.log import Logger
 
 
 class Analysis:
-    def __init__(self, article_number, _type="Day"):
+    def __init__(self, article_number, _type="One"):
         self.db = MySqlDb()
         self.engine = self.db.getEngine()
         self.log = Logger().logger
         self.article_number = article_number
+        self.type = _type
         # 保存图片文件夹
         self.save_img_path = ConfigUtil().getValue("analysis_img_path") + self.article_number
         if not os.path.exists(self.save_img_path):
             os.makedirs(self.save_img_path)
         # 查询数据
         sql = f"SELECT * FROM org_purchase_record WHERE article_number = '{article_number}'"
-        if _type == "Day":
+        if _type == "One":
             sql += "and format_time >= DATE_SUB(DATE_FORMAT(NOW(), '%Y-%m-%d'), INTERVAL 30 DAY)"
-        elif _type == "Num":
-            sql += "LIMIT 1000"
+        elif _type == "Three":
+            sql += "and format_time >= DATE_SUB(DATE_FORMAT(NOW(), '%Y-%m-%d'), INTERVAL 91 DAY)"
         self.all_data = pd.read_sql_query(sql, self.engine)
         # 删除求购
         self.data = self.all_data.drop(self.all_data[self.all_data.order_sub_type_name == "求购"].index)
@@ -38,10 +39,8 @@ class Analysis:
         # 图片属性
         self.image_wide = 15
         self.image_high = 10
-
-        # plt.rcParams['font.sans-serif'] = ['KaiTi', 'SimHei', 'FangSong']  # 汉字字体,优先使用楷体，如果找不到楷体，则使用黑体
-        # plt.rcParams['font.size'] = 12  # 字体大小
-        # plt.rcParams['axes.unicode_minus'] = False  # 正常显示负号
+        self.title_fontsize = 16
+        self.label_fontsize = 14
 
     def get_price_volume(self, chart_type="日期"):
         """
@@ -54,19 +53,20 @@ class Analysis:
 
         # 绘图
         fig = plt.figure(figsize=(self.image_wide, self.image_high))
-        fig.suptitle(f"{chart_type}-价格-销量趋势图(30天)")
         p = fig.add_subplot(111)
-        p.set_ylabel("价格")
-        p.set_xlabel(chart_type)
+        p.set_title(f"{chart_type}-价格-销量趋势图", fontsize=self.label_fontsize)
+        p.set_ylabel("价格", fontsize=self.label_fontsize)
+        p.set_xlabel(chart_type, fontsize=self.label_fontsize)
         p.plot(self.date if chart_type == "日期" else self.size, price)
         c = p.twinx()
-        c.set_ylabel("交易量")
+        c.set_ylabel("交易量", fontsize=self.label_fontsize)
         ca = c.bar(self.date if chart_type == "日期" else self.size, counts, alpha=0.3)
         fig.legend(['平均价格', '交易量'])
-        self.__auto_text(ca)
+        # self.__auto_text(ca)
 
         # 修改保存路径
-        img_path = "/date_price_volume.jpg" if chart_type == "日期" else "/size_price_volume.jpg"
+        img_path = f"/date_price_volume_{self.type}.jpg" if chart_type == "日期" \
+            else f"/size_price_volume_{self.type}.jpg"
         plt.savefig(self.save_img_path + img_path)
 
     def get_user_repeat(self):
@@ -77,11 +77,10 @@ class Analysis:
         # 根据用户名分组的重复率
         users = self.data.groupby('user_name')['price'].count().reset_index(name='数量').sort_values('数量', ascending=False).head(20)
         users.set_index('user_name').plot(kind="bar")
-        plt.title("用户重复购买数量")
-        plt.xlabel("用户名称")
-        plt.ylabel("数量")
-        plt.xticks(rotation=45, fontsize=9, verticalalignment='top', fontweight='light')
-        plt.savefig(self.save_img_path + "/user_repeat.jpg")
+        plt.title("用户重复购买数量", fontsize=self.title_fontsize)
+        plt.xlabel("用户名称", fontsize=self.label_fontsize)
+        plt.ylabel("数量", fontsize=self.label_fontsize)
+        plt.savefig(self.save_img_path + f"/user_repeat_{self.type}.jpg")
 
     def get_repeat_num(self):
         """
@@ -103,12 +102,14 @@ class Analysis:
         # 绘图
         index_list = ["大于两次", "大于三次", "大于四次"]
         data = [two_count, three_count, four_count]
-        res = plt.bar(index_list, data)
-        self.__auto_text(res)
-        plt.title("重复交易量试图")
-        plt.xlabel("重复频率")
-        plt.ylabel("重复交易数量")
-        plt.savefig(self.save_img_path + "/repeat_num.jpg")
+        fig = plt.figure(figsize=(self.image_wide, self.image_high))
+        repeat_plt = fig.add_subplot(111)
+        repeat_plt.set_title("重复交易量试图", fontsize=self.title_fontsize)
+        repeat_plt.set_xlabel("重复频率", fontsize=self.label_fontsize)
+        repeat_plt.set_ylabel("重复交易数量", fontsize=self.label_fontsize)
+        res = repeat_plt.bar(index_list, data)
+        # self.__auto_text(res)
+        plt.savefig(self.save_img_path + f"/repeat_num_{self.type}.jpg")
 
     def update_info(self):
         """
@@ -177,17 +178,17 @@ class Analysis:
         # 绘图
         fig = plt.figure(figsize=(self.image_wide, self.image_high))
         size_plt = fig.add_subplot(211)
-        size_plt.set_title("尺码-求购量图")
-        size_plt.set_ylabel("求购量")
-        size_plt.set_xlabel("尺码")
+        size_plt.set_title("尺码-求购量图", fontsize=self.title_fontsize)
+        size_plt.set_ylabel("求购量", fontsize=self.label_fontsize)
+        size_plt.set_xlabel("尺码", fontsize=self.label_fontsize)
         size_plt.bar(size_index, size_data)
 
         date_plt = fig.add_subplot(212)
-        date_plt.set_title("日期-求购量图")
-        date_plt.set_ylabel("求购量")
-        date_plt.set_xlabel("日期")
+        date_plt.set_title("日期-求购量图", fontsize=self.title_fontsize)
+        date_plt.set_ylabel("求购量", fontsize=self.label_fontsize)
+        date_plt.set_xlabel("日期", fontsize=self.label_fontsize)
         date_plt.bar(date_index, date_data)
-        plt.savefig(self.save_img_path + "/ask_to_buy.jpg")
+        plt.savefig(self.save_img_path + f"/ask_to_buy_{self.type}.jpg")
 
     def run_analysis(self):
         """
@@ -197,26 +198,110 @@ class Analysis:
         # 修改信息
         self.log.info(f"正在更新【{self.article_number}】交易信息")
         self.update_info()
-        self.log.info(f"【{self.article_number}】交易信息更新完成！")
+        self.log.info(f"【{self.article_number}】交易信息更新完成")
 
         # 生成日期价格图
         self.log.info(f"正在生成【{self.article_number}】日期价格图")
         self.get_price_volume()
-        self.log.info(f"【{self.article_number}】日期价格图生成完毕！")
+        self.log.info(f"【{self.article_number}】日期价格图生成完毕")
 
         # 生成尺码价格图
         self.log.info(f"正在生成【{self.article_number}】尺码价格图")
         self.get_price_volume(chart_type="尺码")
-        self.log.info(f"【{self.article_number}】尺码价格图生成完毕！")
+        self.log.info(f"【{self.article_number}】尺码价格图生成完毕")
 
         # 生成求购图
         self.log.info(f"正在生成【{self.article_number}】求购图")
         self.get_ask_to_buy()
         self.log.info(f"【{self.article_number}】求购图生成完毕")
+
         # 生成推荐尺码移动平均线图
-        # 生成推荐尺码K线图
+        self.log.info(f"正在生成【{self.article_number}】SMV图")
+        self.get_mv()
+        self.log.info(f"【{self.article_number}】SMV图生成完毕")
+
+        # 生成交易量重复图
+        self.log.info(f"正在生成【{self.article_number}】交易量重复图")
+        self.get_repeat_num()
+        self.log.info(f"【{self.article_number}】交易量重复图生成完毕")
+
+        # 生成用户交易量重复图
+        self.log.info(f"正在生成【{self.article_number}】用户交易量重复图")
+        self.get_user_repeat()
+        self.log.info(f"【{self.article_number}】用户交易量重复图生成完毕")
+
+    def __get_recommended_data(self):
+        """
+        获取推荐尺码所有的数据
+        :return:
+        """
+        recommended_size = self.data.groupby("properties_values")["id"].count().reset_index(name="count") \
+            .sort_values("count", ascending=False).head(3).properties_values.values.tolist()
+        # 删除非推荐尺码数据
+        recommended_data = self.data.drop(self.data[(self.data.properties_values != recommended_size[0])
+                                                    & (self.data.properties_values != recommended_size[1])
+                                                    & (self.data.properties_values != recommended_size[2])].index)
+        return recommended_data
+
+    def get_mv(self):
+        """
+        绘制移动平均线
+        :return:
+        """
+        # 获取推荐尺码数据
+        recommended_data = self.__get_recommended_data()
+        data = recommended_data.groupby("format_time")
+
+        # 处理数据
+        date_list = []
+        avg_list = []
+        price_list = []
+        for index, d in data:
+            one_day = self.__analysis_one_day(d)
+            date_list.append(pd.to_datetime(index.value, format="%Y-%m-%d"))
+            avg_list.append(one_day['avg_price'])
+            price_list.append(one_day['close_price'])
+
+        # 绘图
+        fig = plt.figure(figsize=(self.image_wide, self.image_high))
+        plot = fig.add_subplot(111)
+        plot.set_title("推荐尺码SMA(Simple Moving Average)", fontsize=self.title_fontsize)
+        plot.set_xlabel("日期", fontsize=self.label_fontsize)
+        plot.set_ylabel("价格", fontsize=self.label_fontsize)
+        plot.plot(date_list, avg_list, label="平均线", color="#F08080")
+        plot.plot(date_list, price_list, label="价格线", color="#DB7093", linestyle="--")
+        plot.legend()
+        plot.grid(alpha=0.4, linestyle=':')
+        plt.savefig(self.save_img_path + f"/mv_{self.type}.jpg")
+
+    def get_k_line(self):
+        """
+        绘制k线图
+        :return:
+        """
+        pass
 
     @staticmethod
     def __auto_text(rects):
         for rect in rects:
             plt.text(rect.get_x(), rect.get_height(), rect.get_height(), va='bottom')
+
+    @staticmethod
+    def __analysis_one_day(data):
+        """
+        分析一天的数据
+        :param data:
+        :return:
+        """
+        max_price = data.price.max()
+        min_price = data.price.min()
+        avg_price = round(data.price.mean(), 2)
+        open_price = data.price.iloc[0]
+        close_price = data.price.iloc[data.shape[0] - 1]
+        return {
+            "max_price": max_price,
+            "min_price": min_price,
+            "avg_price": avg_price,
+            "open_price": open_price,
+            "close_price": close_price
+        }
