@@ -56,9 +56,3 @@ class AnalysisExecutor:
         an = Analysis(article_number, _type='Three')
         an.run_analysis()
         self.log.info(f"【{article_number}】数据分析完成")
-
-    def update_date(self):
-        self.log.info(f"正在进行数据分析")
-        an = Analysis("GY2649")
-        an.run_analysis()
-        self.log.info("数据分析完成")

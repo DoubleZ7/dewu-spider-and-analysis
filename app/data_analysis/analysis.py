@@ -67,7 +67,7 @@ class Analysis:
         # 修改保存路径
         img_path = f"/date_price_volume_{self.type}.jpg" if chart_type == "日期" \
             else f"/size_price_volume_{self.type}.jpg"
-        plt.savefig(self.save_img_path + img_path)
+        fig.savefig(self.save_img_path + img_path)
 
     def get_user_repeat(self):
         """
@@ -75,12 +75,19 @@ class Analysis:
         :return:
         """
         # 根据用户名分组的重复率
-        users = self.data.groupby('user_name')['price'].count().reset_index(name='数量').sort_values('数量', ascending=False).head(20)
-        users.set_index('user_name').plot(kind="bar")
-        plt.title("用户重复购买数量", fontsize=self.title_fontsize)
-        plt.xlabel("用户名称", fontsize=self.label_fontsize)
-        plt.ylabel("数量", fontsize=self.label_fontsize)
-        plt.savefig(self.save_img_path + f"/user_repeat_{self.type}.jpg")
+        users = self.data.groupby('user_name')['price'].count().reset_index(name='count')\
+            .sort_values('count', ascending=False).head(10)
+        user_list = users.user_name.tolist()
+        count_list = users['count'].tolist()
+
+        # 绘图
+        fig = plt.figure(figsize=(self.image_wide, self.image_high))
+        user_repeat_plt = fig.add_subplot(111)
+        user_repeat_plt.set_title("用户重复购买数量", fontsize=self.title_fontsize)
+        user_repeat_plt.set_xlabel("用户名称", fontsize=self.label_fontsize)
+        user_repeat_plt.set_ylabel("数量", fontsize=self.label_fontsize)
+        user_repeat_plt.bar(user_list, count_list)
+        fig.savefig(self.save_img_path + f"/repeat_num_{self.type}.jpg")
 
     def get_repeat_num(self):
         """
@@ -109,7 +116,7 @@ class Analysis:
         repeat_plt.set_ylabel("重复交易数量", fontsize=self.label_fontsize)
         res = repeat_plt.bar(index_list, data)
         # self.__auto_text(res)
-        plt.savefig(self.save_img_path + f"/repeat_num_{self.type}.jpg")
+        fig.savefig(self.save_img_path + f"/repeat_num_{self.type}.jpg")
 
     def update_info(self):
         """
@@ -188,17 +195,18 @@ class Analysis:
         date_plt.set_ylabel("求购量", fontsize=self.label_fontsize)
         date_plt.set_xlabel("日期", fontsize=self.label_fontsize)
         date_plt.bar(date_index, date_data)
-        plt.savefig(self.save_img_path + f"/ask_to_buy_{self.type}.jpg")
+        fig.savefig(self.save_img_path + f"/ask_to_buy_{self.type}.jpg")
 
     def run_analysis(self):
         """
         数据分析
         :return:
         """
-        # 修改信息
-        self.log.info(f"正在更新【{self.article_number}】交易信息")
-        self.update_info()
-        self.log.info(f"【{self.article_number}】交易信息更新完成")
+        if self.type == "One":
+            # 修改信息
+            self.log.info(f"正在更新【{self.article_number}】交易信息")
+            self.update_info()
+            self.log.info(f"【{self.article_number}】交易信息更新完成")
 
         # 生成日期价格图
         self.log.info(f"正在生成【{self.article_number}】日期价格图")
@@ -272,7 +280,7 @@ class Analysis:
         plot.plot(date_list, price_list, label="价格线", color="#DB7093", linestyle="--")
         plot.legend()
         plot.grid(alpha=0.4, linestyle=':')
-        plt.savefig(self.save_img_path + f"/mv_{self.type}.jpg")
+        fig.savefig(self.save_img_path + f"/mv_{self.type}.jpg")
 
     def get_k_line(self):
         """
