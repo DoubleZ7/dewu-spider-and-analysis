@@ -429,7 +429,13 @@ class DeWuSpider:
         if commodity[3] == 1:
             self.log.info(f"开始对【{commodity[2]}】商品进行第一轮数据分析")
             an = AnalysisExecutor()
-            an.update_one_date(commodity[2])
+            # 一月数据
+            an.update_one_month(commodity[2])
+            an.reports_one_month(commodity[2])
+
+            # 三月数据
+            an.update_three_month(commodity[2])
+            an.reports_three_month(commodity[2])
             self.log.info(f"对【{commodity[2]}】商品第一轮数据分析完毕")
         self.log.info(f"商品【{commodity[2]}】执行执行完毕！")
 

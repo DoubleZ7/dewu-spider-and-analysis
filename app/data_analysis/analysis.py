@@ -10,7 +10,7 @@ from app.log import Logger
 
 
 class Analysis:
-    def __init__(self, article_number, _type="One"):
+    def __init__(self, article_number, _type="one_month"):
         self.db = MySqlDb()
         self.engine = self.db.getEngine()
         self.log = Logger().logger
@@ -22,9 +22,9 @@ class Analysis:
             os.makedirs(self.save_img_path)
         # 查询数据
         sql = f"SELECT * FROM org_purchase_record WHERE article_number = '{article_number}'"
-        if _type == "One":
+        if _type == "one_month":
             sql += "and format_time >= DATE_SUB(DATE_FORMAT(NOW(), '%Y-%m-%d'), INTERVAL 30 DAY)"
-        elif _type == "Three":
+        elif _type == "three_month":
             sql += "and format_time >= DATE_SUB(DATE_FORMAT(NOW(), '%Y-%m-%d'), INTERVAL 91 DAY)"
         self.all_data = pd.read_sql_query(sql, self.engine)
         # 删除求购
@@ -87,7 +87,7 @@ class Analysis:
         user_repeat_plt.set_xlabel("用户名称", fontsize=self.label_fontsize)
         user_repeat_plt.set_ylabel("数量", fontsize=self.label_fontsize)
         user_repeat_plt.bar(user_list, count_list)
-        fig.savefig(self.save_img_path + f"/repeat_num_{self.type}.jpg")
+        fig.savefig(self.save_img_path + f"/user_repeat_{self.type}.jpg")
 
     def get_repeat_num(self):
         """
@@ -118,9 +118,9 @@ class Analysis:
         # self.__auto_text(res)
         fig.savefig(self.save_img_path + f"/repeat_num_{self.type}.jpg")
 
-    def update_info(self):
+    def analysis_info(self):
         """
-        更新基础属性
+        获取基础分析数据
         :return:
         """
         # 获取数据
@@ -137,15 +137,30 @@ class Analysis:
         # 计算溢价
         auth_price = self.db.getOne(f"SELECT auth_price FROM org_detail WHERE article_number = '{self.article_number}'")[0]
         premium = round((Decimal(avg_price) - auth_price) / auth_price * 100, 2)
+        return {
+            "r_size": r_size,
+            "max_price": max_price,
+            "min_price": min_price,
+            "avg_price": avg_price,
+            "all_volume": all_volume,
+            "premium": premium
+        }
 
+    def update_info(self):
+        """
+        更新基础属性
+        :return:
+        """
+        an_info = self.analysis_info()
         # 持久化
         query_info_sql = f"SELECT * FROM org_data_analysis_info WHERE article_number = '{self.article_number}'"
         info = self.db.getOne(query_info_sql)
         if info:
             # 更新
             update_sql = f"UPDATE org_data_analysis_info " \
-                         f"SET max_price = {max_price}, avg_price = {avg_price}, min_price = {min_price}, " \
-                         f"premium = {premium},all_volume = {all_volume},recommended_size = '{r_size}'," \
+                         f"SET max_price = {an_info['max_price']}, avg_price = {an_info['avg_price']}," \
+                         f"min_price = {an_info['min_price']}, premium = {an_info['premium']}," \
+                         f"all_volume = {an_info['all_volume']},recommended_size = '{an_info['r_size']}'," \
                          f"update_time = '{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}' " \
                          f"WHERE article_number = '{self.article_number}'"
             self.db.executeSql(update_sql)
@@ -155,12 +170,12 @@ class Analysis:
                 None,
                 self.article_number,
                 0,
-                max_price,
-                avg_price,
-                min_price,
-                premium,
-                all_volume,
-                r_size,
+                an_info['max_price'],
+                an_info['avg_price'],
+                an_info['min_price'],
+                an_info['premium'],
+                an_info['all_volume'],
+                an_info['r_size'],
                 time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
                 time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
             )
@@ -202,7 +217,7 @@ class Analysis:
         数据分析
         :return:
         """
-        if self.type == "One":
+        if self.type == "one_month":
             # 修改信息
             self.log.info(f"正在更新【{self.article_number}】交易信息")
             self.update_info()
@@ -225,7 +240,7 @@ class Analysis:
 
         # 生成推荐尺码移动平均线图
         self.log.info(f"正在生成【{self.article_number}】SMV图")
-        self.get_mv()
+        self.get_ma()
         self.log.info(f"【{self.article_number}】SMV图生成完毕")
 
         # 生成交易量重复图
@@ -251,7 +266,7 @@ class Analysis:
                                                     & (self.data.properties_values != recommended_size[2])].index)
         return recommended_data
 
-    def get_mv(self):
+    def get_ma(self):
         """
         绘制移动平均线
         :return:
@@ -280,7 +295,7 @@ class Analysis:
         plot.plot(date_list, price_list, label="价格线", color="#DB7093", linestyle="--")
         plot.legend()
         plot.grid(alpha=0.4, linestyle=':')
-        fig.savefig(self.save_img_path + f"/mv_{self.type}.jpg")
+        fig.savefig(self.save_img_path + f"/ma_{self.type}.jpg")
 
     def get_k_line(self):
         """

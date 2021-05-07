@@ -6,3 +6,4 @@ flask==1.1.2
 SQLAlchemy==1.4.9
 pandas~=1.1.5
 matplotlib~=3.3.3
+docxtpl==0.11.4

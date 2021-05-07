@@ -1,6 +1,7 @@
 import time
 
 from app.data_analysis.analysis import Analysis
+from app.data_analysis.generate_reports import GenerateReports
 from app.log import Logger
 from app.db.my_sql_db import MySqlDb
 
@@ -28,9 +29,11 @@ class AnalysisExecutor:
         for commodity in article_number_list:
             # 一个月数据
             self.update_one_month(commodity)
+            self.reports_one_month(commodity)
 
             # 三个月数据
             self.update_three_month(commodity)
+            self.reports_three_month(commodity)
 
         now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         self.log.info(f"{now}程序结束")
@@ -53,6 +56,28 @@ class AnalysisExecutor:
         :return:
         """
         self.log.info(f"正在对【{article_number}】进行三个月数据分析")
-        an = Analysis(article_number, _type='Three')
+        an = Analysis(article_number, _type='three_month')
         an.run_analysis()
         self.log.info(f"【{article_number}】数据分析完成")
+
+    def reports_one_month(self, article_number):
+        """
+        生成一个月的数据报告
+        :param article_number:
+        :return:
+        """
+        self.log.info(f"正在生成【{article_number}】一个月数据分析报告")
+        gen = GenerateReports(article_number)
+        gen.generate()
+        self.log.info(f"【{article_number}】一个月数据分析报告生成成功")
+
+    def reports_three_month(self, article_number):
+        """
+        生成三个月的数据报告
+        :param article_number:
+        :return:
+        """
+        self.log.info(f"正在生成【{article_number}】三个月数据分析报告")
+        gen = GenerateReports(article_number, reports_type="three_month")
+        gen.generate()
+        self.log.info(f"【{article_number}】三个月数据分析报告生成成功")
