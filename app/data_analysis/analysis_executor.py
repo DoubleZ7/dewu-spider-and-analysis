@@ -36,6 +36,8 @@ class AnalysisExecutor:
             self.update_three_month(commodity)
             self.reports_three_month(commodity)
 
+            time.sleep(3)
+
         now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         self.log.info(f"{now}程序结束")
 
