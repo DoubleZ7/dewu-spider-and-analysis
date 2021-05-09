@@ -67,6 +67,7 @@ class Analysis:
         img_path = f"/date_price_volume_{self.type}.jpg" if chart_type == "日期" \
             else f"/size_price_volume_{self.type}.jpg"
         fig.savefig(self.save_img_path + img_path)
+        plt.close(fig)
 
     def get_user_repeat(self):
         """
@@ -87,6 +88,7 @@ class Analysis:
         user_repeat_plt.set_ylabel("数量", fontsize=self.label_fontsize)
         user_repeat_plt.bar(user_list, count_list)
         fig.savefig(self.save_img_path + f"/user_repeat_{self.type}.jpg")
+        plt.close(fig)
 
     def get_repeat_num(self):
         """
@@ -116,6 +118,7 @@ class Analysis:
         res = repeat_plt.bar(index_list, data)
         # self.__auto_text(res)
         fig.savefig(self.save_img_path + f"/repeat_num_{self.type}.jpg")
+        plt.close(fig)
 
     def analysis_info(self):
         """
@@ -210,6 +213,7 @@ class Analysis:
         date_plt.set_xlabel("日期", fontsize=self.label_fontsize)
         date_plt.bar(date_index, date_data)
         fig.savefig(self.save_img_path + f"/ask_to_buy_{self.type}.jpg")
+        plt.close(fig)
 
     def run_analysis(self):
         """
@@ -295,6 +299,7 @@ class Analysis:
         plot.legend()
         plot.grid(alpha=0.4, linestyle=':')
         fig.savefig(self.save_img_path + f"/ma_{self.type}.jpg")
+        plt.close(fig)
 
     def get_k_line(self):
         """

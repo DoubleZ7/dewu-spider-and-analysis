@@ -18,7 +18,7 @@ def run():
     # 数据分析程序
     analysis = AnalysisExecutor()
     # scheduler.add_job(analysis.update_all_data, 'cron', day_of_week=0, hour=3)
-    scheduler.add_job(analysis.update_all_data, 'cron', hour=13, minute=40)
+    scheduler.add_job(analysis.update_all_data, 'cron', hour=14, minute=31)
     scheduler.start()
 
 
