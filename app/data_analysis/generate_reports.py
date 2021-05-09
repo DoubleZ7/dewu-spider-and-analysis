@@ -2,7 +2,6 @@ import docxtpl
 import os
 
 from docx.shared import Mm
-from app.db.my_sql_db import MySqlDb
 from app.configUtil import ConfigUtil
 from app.log import Logger
 from app.data_analysis.analysis import Analysis
@@ -13,11 +12,11 @@ class GenerateReports:
     生成数据分析报告
     """
 
-    def __init__(self, article_number, reports_type="one_month"):
+    def __init__(self, article_number, db, reports_type="one_month"):
         self.article_number = article_number
         self.temp_path = os.path.dirname(os.path.dirname(__file__)) + "/static/data_analysis_tpl.docx"
         self.reports_type = reports_type
-        self.db = MySqlDb()
+        self.db = db
         self.log = Logger().logger
         conf = ConfigUtil()
         self.img_path = conf.getValue("img_path") + self.article_number + ".jpg"
@@ -32,7 +31,7 @@ class GenerateReports:
         # logo_img = docxtpl.InlineImage(daily_docx, self.img_path, width=Mm(140))
 
         # 基础分析数据
-        an = Analysis(self.article_number, self.reports_type)
+        an = Analysis(self.article_number, self.db, self.reports_type)
         info = an.analysis_info()
 
         # 分析图

@@ -3,15 +3,14 @@ import matplotlib.pyplot as plt
 import os
 import time
 
-from app.db.my_sql_db import MySqlDb
 from app.configUtil import ConfigUtil
 from decimal import Decimal
 from app.log import Logger
 
 
 class Analysis:
-    def __init__(self, article_number, _type="one_month"):
-        self.db = MySqlDb()
+    def __init__(self, article_number, db, _type="one_month"):
+        self.db = db
         self.engine = self.db.getEngine()
         self.log = Logger().logger
         self.article_number = article_number

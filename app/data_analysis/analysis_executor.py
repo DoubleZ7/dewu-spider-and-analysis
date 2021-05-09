@@ -49,7 +49,7 @@ class AnalysisExecutor:
         :return:
         """
         self.log.info(f"正在对【{article_number}】进行一个月数据分析")
-        an = Analysis(article_number)
+        an = Analysis(article_number, self.db)
         an.run_analysis()
         self.log.info(f"【{article_number}】数据分析完成")
 
@@ -61,7 +61,7 @@ class AnalysisExecutor:
         :return:
         """
         self.log.info(f"正在对【{article_number}】进行三个月数据分析")
-        an = Analysis(article_number, _type='three_month')
+        an = Analysis(article_number, self.db, _type='three_month')
         an.run_analysis()
         self.log.info(f"【{article_number}】数据分析完成")
 
@@ -73,7 +73,7 @@ class AnalysisExecutor:
         :return:
         """
         self.log.info(f"正在生成【{article_number}】一个月数据分析报告")
-        gen = GenerateReports(article_number)
+        gen = GenerateReports(article_number, self.db)
         gen.generate()
         self.log.info(f"【{article_number}】一个月数据分析报告生成成功")
 
@@ -85,6 +85,6 @@ class AnalysisExecutor:
         :return:
         """
         self.log.info(f"正在生成【{article_number}】三个月数据分析报告")
-        gen = GenerateReports(article_number, reports_type="three_month")
+        gen = GenerateReports(article_number, self.db, reports_type="three_month")
         gen.generate()
         self.log.info(f"【{article_number}】三个月数据分析报告生成成功")
