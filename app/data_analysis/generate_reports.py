@@ -29,8 +29,7 @@ class GenerateReports:
                      f"WHERE article_number ='{self.article_number}'"
         detail = self.db.getOne(detail_sql)
         daily_docx = docxtpl.DocxTemplate(self.temp_path)
-        print(self.img_path)
-        logo_img = docxtpl.InlineImage(daily_docx, self.img_path, width=Mm(140))
+        # logo_img = docxtpl.InlineImage(daily_docx, self.img_path, width=Mm(140))
 
         # 基础分析数据
         an = Analysis(self.article_number, self.reports_type)

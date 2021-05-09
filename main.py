@@ -11,14 +11,14 @@ def run():
     log.info("得物数据分析程序定时器已启动")
     scheduler = BlockingScheduler()
     # 定时爬虫程序
-    spider = DeWuSpider()
-    scheduler.add_job(spider.thread_run, 'cron', hour=00)
-    scheduler.add_job(spider.thread_run, 'cron', hour=12)
+    # spider = DeWuSpider()
+    # scheduler.add_job(spider.thread_run, 'cron', hour=00)
+    # scheduler.add_job(spider.thread_run, 'cron', hour=12)
 
     # 数据分析程序
     analysis = AnalysisExecutor()
-    scheduler.add_job(analysis.update_all_data, 'cron', day_of_week=0, hour=3)
-    scheduler.add_job(analysis.update_all_data, 'cron', hour=3)
+    # scheduler.add_job(analysis.update_all_data, 'cron', day_of_week=0, hour=3)
+    scheduler.add_job(analysis.update_all_data, 'cron', hour=13, minute=40)
     scheduler.start()
 
 

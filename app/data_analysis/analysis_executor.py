@@ -4,6 +4,7 @@ from app.data_analysis.analysis import Analysis
 from app.data_analysis.generate_reports import GenerateReports
 from app.log import Logger
 from app.db.my_sql_db import MySqlDb
+from app.decorator.decorator import error_repeat
 
 
 class AnalysisExecutor:
@@ -38,6 +39,7 @@ class AnalysisExecutor:
         now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         self.log.info(f"{now}程序结束")
 
+    @error_repeat
     def update_one_month(self, article_number):
         """
         更新一个月数据
@@ -49,6 +51,7 @@ class AnalysisExecutor:
         an.run_analysis()
         self.log.info(f"【{article_number}】数据分析完成")
 
+    @error_repeat
     def update_three_month(self, article_number):
         """
         更新三个月数据
@@ -60,6 +63,7 @@ class AnalysisExecutor:
         an.run_analysis()
         self.log.info(f"【{article_number}】数据分析完成")
 
+    @error_repeat
     def reports_one_month(self, article_number):
         """
         生成一个月的数据报告
@@ -71,6 +75,7 @@ class AnalysisExecutor:
         gen.generate()
         self.log.info(f"【{article_number}】一个月数据分析报告生成成功")
 
+    @error_repeat
     def reports_three_month(self, article_number):
         """
         生成三个月的数据报告
