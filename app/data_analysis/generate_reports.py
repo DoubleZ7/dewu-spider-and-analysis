@@ -1,5 +1,6 @@
 import docxtpl
 import os
+import time
 
 from docx.shared import Mm
 from app.configUtil import ConfigUtil
@@ -65,7 +66,8 @@ class GenerateReports:
             "ask_to_buy": ask_to_buy,
             "ma": ma,
             "user_repeat": user_repeat,
-            "repeat_num": repeat_num
+            "repeat_num": repeat_num,
+            "create_time": time.strftime('%Y-%m-%d', time.localtime())
         }
         # 渲染docx
         daily_docx.render(context)

@@ -39,7 +39,6 @@ class AnalysisExecutor:
         now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         self.log.info(f"{now}程序结束")
 
-    @error_repeat
     def update_one_month(self, article_number):
         """
         更新一个月数据
