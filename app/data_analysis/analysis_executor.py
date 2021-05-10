@@ -20,9 +20,9 @@ class AnalysisExecutor:
         """
         self.log.info("正在启动单线程数据分析程序...")
         # 查询所有已有记录的商品列表
-        commodity_sql = 'SELECT * FROM org_all_commodity WHERE is_new = 0'
+        commodity_sql = 'SELECT * FROM org_detail'
         commodity_list = self.db.query(commodity_sql)
-        article_number_list = [com[2] for com in commodity_list]
+        article_number_list = [com[7] for com in commodity_list]
 
         # with ThreadPoolExecutor(max_workers=self.thread_count) as executor:
         #     executor.map(self.update_one_date, article_number_list)
