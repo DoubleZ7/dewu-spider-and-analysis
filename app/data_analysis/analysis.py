@@ -125,6 +125,16 @@ class Analysis:
         获取基础分析数据
         :return:
         """
+        if len(self.data) == 0:
+            return {
+                "r_size": "",
+                "max_price": 0,
+                "min_price": 0,
+                "avg_price": 0,
+                "all_volume": 0,
+                "premium": 0
+            }
+
         # 获取数据
         recommended_size = self.data.groupby("properties_values")["id"].count().reset_index(name="count") \
             .sort_values("count", ascending=False).head(3).properties_values.values
@@ -226,35 +236,37 @@ class Analysis:
             self.update_info()
             self.log.info(f"【{self.article_number}】交易信息更新完成")
 
-        # 生成日期价格图
-        self.log.info(f"正在生成【{self.article_number}】日期价格图")
-        self.get_price_volume()
-        self.log.info(f"【{self.article_number}】日期价格图生成完毕")
+        count = len(self.data)
+        if count > 0:
+            # 生成日期价格图
+            self.log.info(f"正在生成【{self.article_number}】日期价格图")
+            self.get_price_volume()
+            self.log.info(f"【{self.article_number}】日期价格图生成完毕")
 
-        # 生成尺码价格图
-        self.log.info(f"正在生成【{self.article_number}】尺码价格图")
-        self.get_price_volume(chart_type="尺码")
-        self.log.info(f"【{self.article_number}】尺码价格图生成完毕")
+            # 生成尺码价格图
+            self.log.info(f"正在生成【{self.article_number}】尺码价格图")
+            self.get_price_volume(chart_type="尺码")
+            self.log.info(f"【{self.article_number}】尺码价格图生成完毕")
 
-        # 生成求购图
-        self.log.info(f"正在生成【{self.article_number}】求购图")
-        self.get_ask_to_buy()
-        self.log.info(f"【{self.article_number}】求购图生成完毕")
+            # 生成求购图
+            self.log.info(f"正在生成【{self.article_number}】求购图")
+            self.get_ask_to_buy()
+            self.log.info(f"【{self.article_number}】求购图生成完毕")
 
-        # 生成推荐尺码移动平均线图
-        self.log.info(f"正在生成【{self.article_number}】SMV图")
-        self.get_ma()
-        self.log.info(f"【{self.article_number}】SMV图生成完毕")
+            # 生成推荐尺码移动平均线图
+            self.log.info(f"正在生成【{self.article_number}】SMV图")
+            self.get_ma()
+            self.log.info(f"【{self.article_number}】SMV图生成完毕")
 
-        # 生成交易量重复图
-        self.log.info(f"正在生成【{self.article_number}】交易量重复图")
-        self.get_repeat_num()
-        self.log.info(f"【{self.article_number}】交易量重复图生成完毕")
+            # 生成交易量重复图
+            self.log.info(f"正在生成【{self.article_number}】交易量重复图")
+            self.get_repeat_num()
+            self.log.info(f"【{self.article_number}】交易量重复图生成完毕")
 
-        # 生成用户交易量重复图
-        self.log.info(f"正在生成【{self.article_number}】用户交易量重复图")
-        self.get_user_repeat()
-        self.log.info(f"【{self.article_number}】用户交易量重复图生成完毕")
+            # 生成用户交易量重复图
+            self.log.info(f"正在生成【{self.article_number}】用户交易量重复图")
+            self.get_user_repeat()
+            self.log.info(f"【{self.article_number}】用户交易量重复图生成完毕")
 
     def __get_recommended_data(self):
         """
