@@ -1,0 +1,32 @@
+monitortime: 60
+
+maxtimeout: 30
+logConfig:
+  logFilePath: 'app/logs/'
+  testLogLevel:
+    mainLogLevel: INFO
+    fileLogLevel: INFO
+    consoleLogLevel: INFO
+  productLogLevel:
+    mainLogLevel: INFO
+    fileLogLevel: INFO
+    consoleLogLevel: ERROR
+
+db:
+  host: '数据库地址'
+  username: '用户名'
+  password: '密码'
+  port: 端口
+  dbName: '库名'
+  charset: 'utf8'
+
+
+img_path: "商品图片保存地址"
+
+analysis_img_path: "分析图片保存地址"
+
+zhi_ma_ip_url: "芝麻代理接口"
+
+white_list_ip_url: "芝麻代理加白名单接口"
+
+
